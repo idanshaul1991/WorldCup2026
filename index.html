@@ -163,6 +163,18 @@ body.light .header{background:linear-gradient(135deg,#1a1a2e,#2a2a4e)}
 body.light .picks-bar{background:linear-gradient(90deg,#1a1a2e,#1a3a1a)}
 body.light .scores-panel{background:#f8f8ff}
 body.light .pred-box{background:#f8f8ff}
+/* Group teams in light mode */
+body.light .t1{border-color:#16a34a;background:#f0fdf4;color:#14532d}
+body.light .t2{border-color:#2563eb;background:#eff6ff;color:#1e3a8a}
+body.light .t3{border-color:#d97706;background:#fffbeb;color:#78350f}
+body.light .t4{border-color:#dc2626;background:#fef2f2;color:#7f1d1d}
+body.light .t1 .tier-badge{background:#dcfce7;color:#166534;border:1px solid #16a34a}
+body.light .t2 .tier-badge{background:#dbeafe;color:#1e40af;border:1px solid #2563eb}
+body.light .t3 .tier-badge{background:#fef3c7;color:#92400e;border:1px solid #d97706}
+body.light .t4 .tier-badge{background:#fee2e2;color:#991b1b;border:1px solid #dc2626}
+body.light .group-team{color:var(--text)}
+body.light .stat-val{color:#d97706}
+body.light .prog-bar{background:#e2e8f0}
 /* ── NEXT MATCH BANNER ── */
 .next-match-banner{background:linear-gradient(135deg,#1a1500,#0d1a0d);border:1px solid var(--gold);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .next-match-countdown{font-size:1.5rem;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;min-width:110px;text-align:center}
@@ -951,7 +963,7 @@ async function askAI(){
     const data = await callAI({
       model:'claude-sonnet-4-20250514', max_tokens:1000,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      system:`אתה מנתח הימורי מונדיאל מומחה. ענה בעברית בלבד, תמציתי ומעשי. כלול: ניתוח סטטיסטי + המלצת הימור + מה להימנע. הימורי המשתמש: הולנד לזכות (20-1), למין יאמל לבוט הזהב (+2000).`,
+      system:'אתה מנתח הימורי מונדיאל מומחה. ענה תמיד בעברית בלבד, בצורה מסודרת ועם כותרות ברורות. כלול: ניתוח קצר + המלצת הימור קונקרטית + מה להימנע. ההימורים שלי: הולנד לזכות (20-1), למין יאמל לבוט הזהב (+2000).',
       messages:[{role:'user',content:q}]
     });
     box.textContent = data.content?.map(c=>c.text||'').join('') || 'לא התקבלה תשובה';
@@ -968,7 +980,7 @@ async function loadNews(){
     const data = await callAI({
       model:'claude-sonnet-4-20250514', max_tokens:1000,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      messages:[{role:'user',content:`חפש חדשות מונדיאל 2026 מהיום ${new Date().toLocaleDateString('he-IL')} — פציעות, תוצאות, עדכונים. החזר JSON בלבד: {"news":[{"title":"...","detail":"...","time":"לפני X שעות"}]} — 5 פריטים.`}]
+      system:'ענה תמיד בעברית בלבד. החזר JSON תקני בלבד ללא טקסט נוסף.',messages:[{role:'user',content:`חפש חדשות מונדיאל 2026 מהיום ${new Date().toLocaleDateString('he-IL')}. החזר JSON בדיוק בפורמט הזה ללא שום טקסט נוסף: {"news":[{"title":"כותרת קצרה בעברית","detail":"פירוט בעברית","time":"לפני X שעות"}]} — בדיוק 5 פריטים.`}]
     });
     const text = data.content?.map(c=>c.text||'').join('')||'';
     let items; try{const mm=text.match(/\{[\s\S]*\}/);items=mm?JSON.parse(mm[0]).news:null;}catch{items=null;}
@@ -987,7 +999,7 @@ async function loadOddsLog(){
     const data = await callAI({
       model:'claude-sonnet-4-20250514', max_tokens:1000,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      messages:[{role:'user',content:`חפש שינויים בשוק ההימורים של מונדיאל 2026 לאחרונה — איזה אודס קיצרו/התארכו ולמה. החזר JSON בלבד: {"changes":[{"team":"...","from":"...","to":"...","direction":"up/down","reason":"...","time":"לפני X שעות"}]} — 5 שינויים.`}]
+      system:'ענה תמיד בעברית בלבד. החזר JSON תקני בלבד ללא טקסט נוסף.',messages:[{role:'user',content:`חפש שינויים עדכניים בשוק ההימורים של מונדיאל 2026. החזר JSON בדיוק בפורמט הזה ללא שום טקסט נוסף: {"changes":[{"team":"שם קבוצה בעברית","from":"+450","to":"+400","direction":"up","reason":"סיבה קצרה בעברית","time":"לפני X שעות"}]} — בדיוק 5 שינויים.`}]
     });
     const text = data.content?.map(c=>c.text||'').join('')||'';
     let items; try{const mm=text.match(/\{[\s\S]*\}/);items=mm?JSON.parse(mm[0]).changes:null;}catch{items=null;}
@@ -1395,7 +1407,8 @@ async function loadH2HNews(m){
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:600,
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`חפש חדשות אחרונות על ${m.home} ו-${m.away} לקראת מונדיאל 2026 — פציעות, כושר שחקנים, הרכב צפוי. תן 3-4 עדכונים קצרים בעברית בלבד, בפורמט: • [קבוצה]: [עדכון]`}]
+        system:'ענה תמיד בעברית בלבד. כתוב בצורה נקייה ומסודרת.',messages:[{role:'user',content:`חפש חדשות אחרונות על ${m.home} ו-${m.away} לקראת מונדיאל 2026 — פציעות, כושר שחקנים, הרכב צפוי. כתוב בעברית בלבד, 4 עדכונים, כל אחד בשורה נפרדת בפורמט:
+• [שם קבוצה]: [עדכון קצר וברור]`}]
       })
     });
     const data=await res.json();
