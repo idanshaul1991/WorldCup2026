@@ -1,5 +1,7 @@
 // Netlify Function: /api/update
-// Allows Claude to push file updates to GitHub directly
+// Supports two modes:
+// 1. Full file update: { filename, content, message }
+// 2. Patch mode: { filename, patch: { find, replace }, message }
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -14,13 +16,10 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { filename, content, message } = JSON.parse(event.body);
+    const { filename, content, patch, message } = JSON.parse(event.body);
+    if (!filename) return { statusCode: 400, body: JSON.stringify({ error: 'filename required' }) };
 
-    if (!filename || !content) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'filename and content required' }) };
-    }
-
-    // Get current file SHA (required for update)
+    // Get current file
     const getRes = await fetch(
       `https://api.github.com/repos/${REPO}/contents/${filename}`,
       { headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' } }
@@ -28,10 +27,23 @@ exports.handler = async (event) => {
     const fileData = await getRes.json();
     const sha = fileData.sha;
 
-    // Encode content to base64
-    const encoded = Buffer.from(content, 'utf8').toString('base64');
+    let finalContent;
 
-    // Push update
+    if (patch) {
+      // Patch mode — decode current, find & replace, re-encode
+      const current = Buffer.from(fileData.content, 'base64').toString('utf8');
+      if (!current.includes(patch.find)) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'patch.find string not found in file' }) };
+      }
+      finalContent = current.replace(patch.find, patch.replace);
+    } else if (content) {
+      finalContent = content;
+    } else {
+      return { statusCode: 400, body: JSON.stringify({ error: 'content or patch required' }) };
+    }
+
+    const encoded = Buffer.from(finalContent, 'utf8').toString('base64');
+
     const updateRes = await fetch(
       `https://api.github.com/repos/${REPO}/contents/${filename}`,
       {
@@ -44,7 +56,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           message: message || `Update ${filename}`,
           content: encoded,
-          sha: sha
+          sha
         })
       }
     );
@@ -58,10 +70,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({ success: true, commit: result.commit?.sha, message: `Updated ${filename}` })
       };
     } else {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: result.message })
-      };
+      return { statusCode: 400, body: JSON.stringify({ error: result.message }) };
     }
 
   } catch (err) {
