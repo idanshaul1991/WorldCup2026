@@ -1013,7 +1013,7 @@ function renderOdds(){
 
 // ===================== AI =====================
 // All API calls go through /api/ai (Netlify Function) — API key stays secret on server
-const API_ENDPOINT = 'https://worldcup2026-idan.netlify.app/.netlify/functions/ai';
+const API_ENDPOINT = 'https://worldcup-ai.idanshaul.workers.dev';
 
 async function callAI(payload, retries=2) {
   for(let attempt=0; attempt<=retries; attempt++){
@@ -1493,7 +1493,7 @@ async function loadH2HNews(m){
   if(!newsDiv) return;
   newsDiv.innerHTML=`<div style="color:var(--muted);font-size:.8rem"><span class="spinner"></span> טוען חדשות...</div>`;
   try{
-    const res=await fetch('https://worldcup2026-idan.netlify.app/.netlify/functions/ai',{
+    const res=await fetch('https://worldcup-ai.idanshaul.workers.dev',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:600,
@@ -1537,22 +1537,29 @@ function showPlayerModal(teamName, posKey, playerName){
   else {tier='כוכב עולה';tierColor='#f472b6';}
 
   const goalsPerCap = p.caps>0 ? ((p.g/p.caps)*100).toFixed(0) : 0;
+  const thirdStat = posKey==='GK'
+    ? {val:p.cs??0, lbl:'שערים נקיים'}
+    : {val:p.a??0, lbl:'בישולים'};
 
   let html = `<div class="pm-header">
     <div class="pm-avatar" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})">${initials}</div>
     <div>
       <div class="pm-name">${p.n}</div>
       <div class="pm-sub">${team.f} ${teamName} · ${meta.label} ${p.cap?' · © קפטן':''}</div>
-      <div class="pm-sub"><span style="background:${tierColor}22;color:${tierColor};padding:1px 8px;border-radius:10px;font-weight:800;font-size:.68rem">${tier}</span></div>
+      <div class="pm-sub"><span style="background:${tierColor}22;color:${tierColor};padding:1px 8px;border-radius:10px;font-weight:800;font-size:.68rem">${tier}</span>${p.age?` <span style="color:var(--muted);font-size:.7rem">· גיל ${p.age}</span>`:''}</div>
     </div>
   </div>
-  <div class="pm-stats-grid">
-    <div class="pm-stat-box"><div class="pm-stat-val">${p.caps}</div><div class="pm-stat-lbl">הופעות נבחרת</div></div>
+  <div class="pm-stats-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="pm-stat-box"><div class="pm-stat-val">${p.caps}</div><div class="pm-stat-lbl">הופעות</div></div>
     <div class="pm-stat-box"><div class="pm-stat-val">${p.g}</div><div class="pm-stat-lbl">שערים</div></div>
+    <div class="pm-stat-box"><div class="pm-stat-val">${thirdStat.val}</div><div class="pm-stat-lbl">${thirdStat.lbl}</div></div>
   </div>`;
 
+  if(p.club){
+    html += `<div class="pm-row"><span class="pm-row-lbl">⚽ קבוצה נוכחית</span><span class="pm-row-val">${p.club}</span></div>`;
+  }
   if(p.goal_pct!=null){
-    html += `<div class="pm-row"><span class="pm-row-lbl">מעורבות במשחק (% משחקים עם גול)</span><span class="pm-row-val" style="color:#4ade80">${p.goal_pct}%</span></div>`;
+    html += `<div class="pm-row"><span class="pm-row-lbl">מעורבות במשחק (% עם גול)</span><span class="pm-row-val" style="color:#4ade80">${p.goal_pct}%</span></div>`;
   }
   html += `<div class="pm-row"><span class="pm-row-lbl">יחס שערים להופעות</span><span class="pm-row-val">${goalsPerCap}%</span></div>`;
   html += `<div class="pm-row"><span class="pm-row-lbl">תפקיד</span><span class="pm-row-val">${meta.label}</span></div>`;
@@ -1580,7 +1587,7 @@ async function checkDailyOddsUpdate(){
   if(lastUpdate===today) return; // already updated today
 
   try{
-    const res=await fetch('https://worldcup2026-idan.netlify.app/.netlify/functions/ai',{
+    const res=await fetch('https://worldcup-ai.idanshaul.workers.dev',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:800,
@@ -1780,88 +1787,88 @@ function startLivePolling(){
 // ===================== SQUAD DATA =====================
 const SQUADS = {
   'מקסיקו': {
-    GK:[{n:'Guillermo Ochoa',caps:152,g:0},{n:'Luis Malagón',caps:15,g:0}],
-    DEF:[{n:'César Montes',caps:48,g:2},{n:'Johan Vásquez',caps:35,g:1},{n:'Jesús Gallardo',caps:72,g:3},{n:'Gerardo Arteaga',caps:30,g:1}],
-    MID:[{n:'Edson Álvarez',caps:95,g:6},{n:'Héctor Herrera',caps:119,g:18},{n:'Carlos Rodríguez',caps:55,g:4}],
-    FWD:[{n:'Hirving Lozano',caps:88,g:17,goal_pct:19},{n:'Raúl Jiménez',caps:109,g:40,goal_pct:37},{n:'Henry Martín',caps:42,g:14,goal_pct:33},{n:'Roberto Alvarado',caps:38,g:8,goal_pct:21}]
+    GK:[{n:'Guillermo Ochoa',caps:152,g:0,club:'AVS, פורטוגל',age:40,cs:52},{n:'Luis Malagón',caps:15,g:0,club:'אמריקה, מקסיקו',age:28,cs:14}],
+    DEF:[{n:'César Montes',caps:48,g:2,club:'אספניול, ספרד',age:28,a:1},{n:'Johan Vásquez',caps:35,g:1,club:'ג\'נואה, איטליה',age:26,a:2},{n:'Jesús Gallardo',caps:72,g:3,club:'מונטריי, מקסיקו',age:30,a:6},{n:'Gerardo Arteaga',caps:30,g:1,club:'שטוטגרט, גרמניה',age:27,a:3}],
+    MID:[{n:'Edson Álvarez',caps:95,g:6,club:'ווסטהאם, אנגליה',age:28,a:2},{n:'Héctor Herrera',caps:119,g:18,club:'יוסטון דיינמו, ארה"ב',age:36,a:14},{n:'Carlos Rodríguez',caps:55,g:4,club:'קרוס אזול, מקסיקו',age:27,a:5}],
+    FWD:[{n:'Hirving Lozano',caps:88,g:17,goal_pct:19,club:'סן דייגו FC, ארה"ב',age:30,a:12},{n:'Raúl Jiménez',caps:109,g:40,goal_pct:37,club:'פולהאם, אנגליה',age:35,a:9},{n:'Henry Martín',caps:42,g:14,goal_pct:33,club:'אמריקה, מקסיקו',age:32,a:4},{n:'Roberto Alvarado',caps:38,g:8,goal_pct:21,club:'צ\'יוואס גוודלחרה, מקסיקו',age:27,a:7}]
   },
   'דרום אפריקה': {
-    GK:[{n:'Ronwen Williams',caps:45,g:0},{n:'Bruce Bvuma',caps:18,g:0}],
-    DEF:[{n:'Siyanda Xulu',caps:48,g:1},{n:'Rushine De Reuck',caps:32,g:2},{n:'Innocent Maela',caps:55,g:1}],
-    MID:[{n:'Themba Zwane',caps:62,g:10},{n:'Teboho Mokoena',caps:58,g:8},{n:'Ethan Ntsanwisi',caps:22,g:3}],
-    FWD:[{n:'Percy Tau',caps:76,g:14,goal_pct:18},{n:'Evidence Makgopa',caps:24,g:8,goal_pct:33},{n:'Lyle Foster',caps:28,g:6,goal_pct:21}]
+    GK:[{n:'Ronwen Williams',caps:45,g:0,club:'מאמלודי סנדאונס, דרא"פ',age:34,cs:18},{n:'Bruce Bvuma',caps:18,g:0,club:'קייזר צ\'יפס, דרא"פ',age:30,cs:6}],
+    DEF:[{n:'Siyanda Xulu',caps:48,g:1,club:'סטלנבוש, דרא"פ',age:35,a:1},{n:'Rushine De Reuck',caps:32,g:2,club:'מאמלודי סנדאונס, דרא"פ',age:28,a:2},{n:'Innocent Maela',caps:55,g:1,club:'אורלנדו פיראטס, דרא"פ',age:32,a:3}],
+    MID:[{n:'Themba Zwane',caps:62,g:10,club:'מאמלודי סנדאונס, דרא"פ',age:35,a:14},{n:'Teboho Mokoena',caps:58,g:8,club:'מאמלודי סנדאונס, דרא"פ',age:28,a:6},{n:'Ethan Ntsanwisi',caps:22,g:3,club:'מאמלודי סנדאונס, דרא"פ',age:23,a:2}],
+    FWD:[{n:'Percy Tau',caps:76,g:14,goal_pct:18,club:'אל אהלי, מצרים',age:31,a:10},{n:'Evidence Makgopa',caps:24,g:8,goal_pct:33,club:'אורלנדו פיראטס, דרא"פ',age:24,a:4},{n:'Lyle Foster',caps:28,g:6,goal_pct:21,club:'ברנלי, אנגליה',age:25,a:3}]
   },
   'הולנד': {
-    GK:[{n:'Bart Verbruggen',caps:18,g:0},{n:'Mark Flekken',caps:12,g:0}],
-    DEF:[{n:'Virgil van Dijk',caps:68,g:7,cap:true},{n:'Stefan de Vrij',caps:55,g:4},{n:'Denzel Dumfries',caps:52,g:8},{n:'Nathan Aké',caps:48,g:6}],
-    MID:[{n:'Frenkie de Jong',caps:62,g:8},{n:'Tijjani Reijnders',caps:24,g:5},{n:'Teun Koopmeiners',caps:38,g:12}],
-    FWD:[{n:'Cody Gakpo',caps:44,g:14,goal_pct:32},{n:'Donyell Malen',caps:38,g:10,goal_pct:26},{n:'Wout Weghorst',caps:55,g:14,goal_pct:25},{n:'Memphis Depay',caps:102,g:46,goal_pct:45}]
+    GK:[{n:'Bart Verbruggen',caps:18,g:0,club:'ברייטון, אנגליה',age:23,cs:6},{n:'Mark Flekken',caps:12,g:0,club:'בריינטפורד, אנגליה',age:32,cs:4}],
+    DEF:[{n:'Virgil van Dijk',caps:68,g:7,cap:true,club:'ליברפול, אנגליה',age:35,a:3},{n:'Stefan de Vrij',caps:55,g:4,club:'אינטר מילאן, איטליה',age:33,a:2},{n:'Denzel Dumfries',caps:52,g:8,club:'אינטר מילאן, איטליה',age:30,a:14},{n:'Nathan Aké',caps:48,g:6,club:'מנצ\'סטר סיטי, אנגליה',age:31,a:4}],
+    MID:[{n:'Frenkie de Jong',caps:62,g:8,club:'ברצלונה, ספרד',age:29,a:9},{n:'Tijjani Reijnders',caps:24,g:5,club:'מנצ\'סטר סיטי, אנגליה',age:27,a:8},{n:'Teun Koopmeiners',caps:38,g:12,club:'יובנטוס, איטליה',age:28,a:10}],
+    FWD:[{n:'Cody Gakpo',caps:44,g:14,goal_pct:32,club:'ליברפול, אנגליה',age:27,a:18},{n:'Donyell Malen',caps:38,g:10,goal_pct:26,club:'אסטון וילה, אנגליה',age:27,a:12},{n:'Wout Weghorst',caps:55,g:14,goal_pct:25,club:'איינטרכט פרנקפורט, גרמניה',age:33,a:9},{n:'Memphis Depay',caps:102,g:46,goal_pct:45,club:'קורינתיאנס, ברזיל',age:32,a:28}]
   },
   'ספרד': {
-    GK:[{n:'Unai Simón',caps:42,g:0},{n:'David Raya',caps:18,g:0}],
-    DEF:[{n:'Dani Carvajal',caps:80,g:4},{n:'Pau Cubarsí',caps:14,g:1},{n:'Aymeric Laporte',caps:52,g:5},{n:'Marc Cucurella',caps:35,g:3}],
-    MID:[{n:'Pedri',caps:38,g:5},{n:'Rodri',caps:58,g:8},{n:'Fabián Ruiz',caps:35,g:7}],
-    FWD:[{n:'Lamine Yamal',caps:28,g:8,goal_pct:29},{n:'Nico Williams',caps:24,g:6,goal_pct:25},{n:'Álvaro Morata',caps:82,g:36,goal_pct:44},{n:'Mikel Oyarzabal',caps:45,g:18,goal_pct:40}]
+    GK:[{n:'Unai Simón',caps:42,g:0,club:'אתלטיק בילבאו, ספרד',age:29,cs:19},{n:'David Raya',caps:18,g:0,club:'ארסנל, אנגליה',age:30,cs:8}],
+    DEF:[{n:'Dani Carvajal',caps:80,g:4,club:'ריאל מדריד, ספרד',age:34,a:9},{n:'Pau Cubarsí',caps:14,g:1,club:'ברצלונה, ספרד',age:19,a:1},{n:'Aymeric Laporte',caps:52,g:5,club:'אל נאסר, ערב הסעודית',age:32,a:2},{n:'Marc Cucurella',caps:35,g:3,club:'צ\'לסי, אנגליה',age:28,a:5}],
+    MID:[{n:'Pedri',caps:38,g:5,club:'ברצלונה, ספרד',age:23,a:10},{n:'Rodri',caps:58,g:8,club:'מנצ\'סטר סיטי, אנגליה',age:30,a:9},{n:'Fabián Ruiz',caps:35,g:7,club:'פריז סן ז\'רמן, צרפת',age:30,a:8}],
+    FWD:[{n:'Lamine Yamal',caps:28,g:8,goal_pct:29,club:'ברצלונה, ספרד',age:19,a:14},{n:'Nico Williams',caps:24,g:6,goal_pct:25,club:'אתלטיק בילבאו, ספרד',age:24,a:10},{n:'Álvaro Morata',caps:82,g:36,goal_pct:44,club:'מילאן, איטליה',age:33,a:14},{n:'Mikel Oyarzabal',caps:45,g:18,goal_pct:40,club:'ראיאל סוסיאדד, ספרד',age:28,a:16}]
   },
   'צרפת': {
-    GK:[{n:'Mike Maignan',caps:28,g:0},{n:'Alphonse Areola',caps:22,g:0}],
-    DEF:[{n:'Jules Koundé',caps:48,g:2},{n:'William Saliba',caps:24,g:1},{n:'Théo Hernández',caps:42,g:6},{n:'Benjamin Pavard',caps:55,g:5}],
-    MID:[{n:'Aurélien Tchouaméni',caps:40,g:4},{n:'Antoine Griezmann',caps:132,g:56},{n:'Adrien Rabiot',caps:52,g:12}],
-    FWD:[{n:'Kylian Mbappé',caps:82,g:48,goal_pct:59},{n:'Ousmane Dembélé',caps:55,g:14,goal_pct:25},{n:'Marcus Thuram',caps:32,g:12,goal_pct:38}]
+    GK:[{n:'Mike Maignan',caps:28,g:0,club:'מילאן, איטליה',age:30,cs:14},{n:'Alphonse Areola',caps:22,g:0,club:'וסט המ, אנגליה',age:33,cs:3}],
+    DEF:[{n:'Jules Koundé',caps:48,g:2,club:'ברצלונה, ספרד',age:27,a:4},{n:'William Saliba',caps:24,g:1,club:'ארסנל, אנגליה',age:25,a:1},{n:'Théo Hernández',caps:42,g:6,club:'אל הילאל, ערב הסעודית',age:28,a:14},{n:'Benjamin Pavard',caps:55,g:5,club:'אינטר מילאן, איטליה',age:30,a:3}],
+    MID:[{n:'Aurélien Tchouaméni',caps:40,g:4,club:'ריאל מדריד, ספרד',age:26,a:4},{n:'Antoine Griezmann',caps:132,g:56,club:'אטלטיקו מדריד, ספרד',age:35,a:41},{n:'Adrien Rabiot',caps:52,g:12,club:'מרסיי, צרפת',age:31,a:9}],
+    FWD:[{n:'Kylian Mbappé',caps:82,g:48,goal_pct:59,club:'ריאל מדריד, ספרד',age:27,a:17},{n:'Ousmane Dembélé',caps:55,g:14,goal_pct:25,club:'פריז סן ז\'רמן, צרפת',age:29,a:22},{n:'Marcus Thuram',caps:32,g:12,goal_pct:38,club:'אינטר מילאן, איטליה',age:28,a:14}]
   },
   'ארגנטינה': {
-    GK:[{n:'Emiliano Martínez',caps:45,g:0},{n:'Franco Armani',caps:22,g:0}],
-    DEF:[{n:'Nahuel Molina',caps:48,g:8},{n:'Cristian Romero',caps:42,g:3},{n:'Lisandro Martínez',caps:38,g:4},{n:'Nicolás Tagliafico',caps:55,g:6}],
-    MID:[{n:'Rodrigo De Paul',caps:72,g:10},{n:'Enzo Fernández',caps:38,g:8},{n:'Alexis Mac Allister',caps:42,g:12}],
-    FWD:[{n:'Lionel Messi',caps:188,g:109,goal_pct:58,cap:true},{n:'Lautaro Martínez',caps:68,g:30,goal_pct:44},{n:'Julián Álvarez',caps:42,g:18,goal_pct:43},{n:'Ángel Di María',caps:145,g:31,goal_pct:21}]
+    GK:[{n:'Emiliano Martínez',caps:45,g:0,club:'אסטון וילה, אנגליה',age:33,cs:22},{n:'Franco Armani',caps:22,g:0,club:'ריבר פלייט, ארגנטינה',age:39,cs:10}],
+    DEF:[{n:'Nahuel Molina',caps:48,g:8,club:'אטלטיקו מדריד, ספרד',age:28,a:10},{n:'Cristian Romero',caps:42,g:3,club:'טוטנהאם, אנגליה',age:27,a:2},{n:'Lisandro Martínez',caps:38,g:4,club:'מנצ\'סטר יונייטד, אנגליה',age:27,a:1},{n:'Nicolás Tagliafico',caps:55,g:6,club:'ליון, צרפת',age:33,a:6}],
+    MID:[{n:'Rodrigo De Paul',caps:72,g:10,club:'אינטר מיאמי, ארה"ב',age:31,a:16},{n:'Enzo Fernández',caps:38,g:8,club:'צ\'לסי, אנגליה',age:25,a:8},{n:'Alexis Mac Allister',caps:42,g:12,club:'ליברפול, אנגליה',age:27,a:14}],
+    FWD:[{n:'Lionel Messi',caps:188,g:109,goal_pct:58,cap:true,club:'אינטר מיאמי, ארה"ב',age:38,a:56},{n:'Lautaro Martínez',caps:68,g:30,goal_pct:44,club:'אינטר מילאן, איטליה',age:28,a:17},{n:'Julián Álvarez',caps:42,g:18,goal_pct:43,club:'אטלטיקו מדריד, ספרד',age:26,a:11},{n:'Ángel Di María',caps:145,g:31,goal_pct:21,club:'רוזאריו סנטרל, ארגנטינה',age:38,a:29}]
   },
   'ברזיל': {
-    GK:[{n:'Alisson',caps:82,g:0},{n:'Ederson',caps:45,g:0}],
-    DEF:[{n:'Éder Militão',caps:42,g:3},{n:'Marquinhos',caps:95,g:12},{n:'Wendell',caps:28,g:1},{n:'Danilo',caps:88,g:7}],
-    MID:[{n:'Casemiro',caps:82,g:8},{n:'Bruno Guimarães',caps:48,g:6},{n:'Lucas Paquetá',caps:58,g:12}],
-    FWD:[{n:'Vinícius Jr.',caps:52,g:24,goal_pct:46},{n:'Rodrygo',caps:42,g:15,goal_pct:36},{n:'Raphinha',caps:48,g:22,goal_pct:46},{n:'Gabriel Martinelli',caps:28,g:8,goal_pct:29}]
+    GK:[{n:'Alisson',caps:82,g:0,club:'ליברפול, אנגליה',age:33,cs:28},{n:'Ederson',caps:45,g:0,club:'פנרבחצ\'ה, טורקיה',age:32,cs:10}],
+    DEF:[{n:'Éder Militão',caps:42,g:3,club:'ריאל מדריד, ספרד',age:28,a:2},{n:'Marquinhos',caps:95,g:12,club:'פריז סן ז\'רמן, צרפת',age:31,a:5},{n:'Wendell',caps:28,g:1,club:'פורטו, פורטוגל',age:32,a:3},{n:'Danilo',caps:88,g:7,club:'נוטינגהם פורסט, אנגליה',age:34,a:6}],
+    MID:[{n:'Casemiro',caps:82,g:8,club:'מנצ\'סטר יונייטד, אנגליה',age:33,a:4},{n:'Bruno Guimarães',caps:48,g:6,club:'ניוקאסל, אנגליה',age:27,a:10},{n:'Lucas Paquetá',caps:58,g:12,club:'וסט המ, אנגליה',age:27,a:14}],
+    FWD:[{n:'Vinícius Jr.',caps:52,g:24,goal_pct:46,club:'ריאל מדריד, ספרד',age:25,a:19},{n:'Rodrygo',caps:42,g:15,goal_pct:36,club:'ריאל מדריד, ספרד',age:25,a:16},{n:'Raphinha',caps:48,g:22,goal_pct:46,club:'ברצלונה, ספרד',age:29,a:21},{n:'Gabriel Martinelli',caps:28,g:8,goal_pct:29,club:'ארסנל, אנגליה',age:24,a:9}]
   },
   'אנגליה': {
-    GK:[{n:'Jordan Pickford',caps:68,g:0},{n:'Aaron Ramsdale',caps:18,g:0}],
-    DEF:[{n:'Kyle Walker',caps:88,g:2},{n:'John Stones',caps:72,g:4},{n:'Harry Maguire',caps:65,g:8},{n:'Luke Shaw',caps:48,g:4}],
-    MID:[{n:'Declan Rice',caps:52,g:6},{n:'Jude Bellingham',caps:38,g:14},{n:'Phil Foden',caps:45,g:12}],
-    FWD:[{n:'Harry Kane',caps:95,g:68,goal_pct:72,cap:true},{n:'Bukayo Saka',caps:55,g:18,goal_pct:33},{n:'Raheem Sterling',caps:82,g:22,goal_pct:27},{n:'Marcus Rashford',caps:62,g:18,goal_pct:29}]
+    GK:[{n:'Jordan Pickford',caps:68,g:0,club:'אברטון, אנגליה',age:32,cs:24},{n:'Aaron Ramsdale',caps:18,g:0,club:'ניוקאסל, אנגליה',age:28,cs:3}],
+    DEF:[{n:'Kyle Walker',caps:88,g:2,club:'בורנמות\', אנגליה',age:36,a:6},{n:'John Stones',caps:72,g:4,club:'מנצ\'סטר סיטי, אנגליה',age:31,a:3},{n:'Harry Maguire',caps:65,g:8,club:'מנצ\'סטר יונייטד, אנגליה',age:33,a:4},{n:'Luke Shaw',caps:48,g:4,club:'מנצ\'סטר יונייטד, אנגליה',age:30,a:9}],
+    MID:[{n:'Declan Rice',caps:52,g:6,club:'ארסנל, אנגליה',age:27,a:7},{n:'Jude Bellingham',caps:38,g:14,club:'ריאל מדריד, ספרד',age:23,a:12},{n:'Phil Foden',caps:45,g:12,club:'מנצ\'סטר סיטי, אנגליה',age:26,a:14}],
+    FWD:[{n:'Harry Kane',caps:95,g:68,goal_pct:72,cap:true,club:'באיירן מינכן, גרמניה',age:32,a:22},{n:'Bukayo Saka',caps:55,g:18,goal_pct:33,club:'ארסנל, אנגליה',age:24,a:24},{n:'Raheem Sterling',caps:82,g:22,goal_pct:27,club:'ארסנל, אנגליה',age:31,a:16},{n:'Marcus Rashford',caps:62,g:18,goal_pct:29,club:'ברצלונה, ספרד',age:28,a:14}]
   },
   'קוריאה הדרומית': {
-    GK:[{n:'Kim Seung-gyu',caps:52,g:0},{n:'Jo Hyeon-woo',caps:28,g:0}],
-    DEF:[{n:'Kim Min-jae',caps:58,g:3},{n:'Kim Young-gwon',caps:112,g:6},{n:'Kim Jin-su',caps:74,g:2}],
-    MID:[{n:'Lee Kang-in',caps:48,g:11},{n:'Hwang In-beom',caps:66,g:5},{n:'Park Yong-woo',caps:24,g:1}],
-    FWD:[{n:'Son Heung-min',caps:135,g:53,goal_pct:39,cap:true},{n:'Hwang Hee-chan',caps:78,g:21,goal_pct:27},{n:'Cho Gue-sung',caps:32,g:13,goal_pct:41}]
+    GK:[{n:'Kim Seung-gyu',caps:52,g:0,club:'אל שבאב, ערב הסעודית',age:39,cs:16},{n:'Jo Hyeon-woo',caps:28,g:0,club:'אולסן הירונדאי, דרום קוריאה',age:37,cs:8}],
+    DEF:[{n:'Kim Min-jae',caps:58,g:3,club:'באיירן מינכן, גרמניה',age:29,a:2},{n:'Kim Young-gwon',caps:112,g:6,club:'אורסום פרהאנג, איראן',age:35,a:3},{n:'Kim Jin-su',caps:74,g:2,club:'אל פיחה, ערב הסעודית',age:32,a:5}],
+    MID:[{n:'Lee Kang-in',caps:48,g:11,club:'פריז סן ז\'רמן, צרפת',age:25,a:10},{n:'Hwang In-beom',caps:66,g:5,club:'זנית סנט פטרבורג, רוסיה',age:29,a:6},{n:'Park Yong-woo',caps:24,g:1,club:'אל איין, איחוד האמירויות',age:27,a:3}],
+    FWD:[{n:'Son Heung-min',caps:135,g:53,goal_pct:39,cap:true,club:'LAFC, ארה"ב',age:33,a:41},{n:'Hwang Hee-chan',caps:78,g:21,goal_pct:27,club:'וולברהמפטון, אנגליה',age:29,a:14},{n:'Cho Gue-sung',caps:32,g:13,goal_pct:41,club:'מידלסברו, אנגליה',age:27,a:7}]
   },
   "צ'כיה": {
-    GK:[{n:'Jindřich Staněk',caps:18,g:0},{n:'Matěj Kovář',caps:9,g:0}],
-    DEF:[{n:'Vladimír Coufal',caps:62,g:2},{n:'Robin Hranáč',caps:22,g:1},{n:'Ladislav Krejčí',caps:34,g:2}],
-    MID:[{n:'Tomáš Souček',caps:75,g:14,cap:true},{n:'Antonín Barák',caps:48,g:9},{n:'Lukáš Provod',caps:20,g:3}],
-    FWD:[{n:'Patrik Schick',caps:55,g:24,goal_pct:44},{n:'Adam Hložek',caps:38,g:7,goal_pct:18},{n:'Václav Černý',caps:42,g:11,goal_pct:26}]
+    GK:[{n:'Jindřich Staněk',caps:18,g:0,club:'פלזן, צ\'כיה',age:29,cs:7},{n:'Matěj Kovář',caps:9,g:0,club:'בייר לברקוזן, גרמניה',age:25,cs:2}],
+    DEF:[{n:'Vladimír Coufal',caps:62,g:2,club:'וסט האם, אנגליה',age:33,a:8},{n:'Robin Hranáč',caps:22,g:1,club:'פיורנטינה, איטליה',age:24,a:1},{n:'Ladislav Krejčí',caps:34,g:2,club:'ג\'נואה, איטליה',age:27,a:2}],
+    MID:[{n:'Tomáš Souček',caps:75,g:14,cap:true,club:'וסט האם, אנגליה',age:30,a:12},{n:'Antonín Barák',caps:48,g:9,club:'טורינו, איטליה',age:31,a:11},{n:'Lukáš Provod',caps:20,g:3,club:'סלאוויה פראג, צ\'כיה',age:28,a:5}],
+    FWD:[{n:'Patrik Schick',caps:55,g:24,goal_pct:44,club:'בייר לברקוזן, גרמניה',age:30,a:8},{n:'Adam Hložek',caps:38,g:7,goal_pct:18,club:'היאנקלהיים, גרמניה',age:23,a:6},{n:'Václav Černý',caps:42,g:11,goal_pct:26,club:'וולפסבורג, גרמניה',age:28,a:10}]
   },
   'קנדה': {
-    GK:[{n:'Maxime Crépeau',caps:38,g:0},{n:'Dayne St. Clair',caps:22,g:0}],
-    DEF:[{n:'Alphonso Davies',caps:58,g:5,cap:true},{n:'Moïse Bombito',caps:28,g:1},{n:'Derek Cornelius',caps:35,g:2}],
-    MID:[{n:'Stephen Eustáquio',caps:52,g:6},{n:'Ismaël Koné',caps:24,g:2},{n:'Tajon Buchanan',caps:48,g:9}],
-    FWD:[{n:'Jonathan David',caps:62,g:32,goal_pct:52},{n:'Cyle Larin',caps:78,g:30,goal_pct:38},{n:'Jacob Shaffelburg',caps:30,g:4,goal_pct:13}]
+    GK:[{n:'Maxime Crépeau',caps:38,g:0,club:'פורטלנד טימברס, ארה"ב',age:31,cs:10},{n:'Dayne St. Clair',caps:22,g:0,club:'מינסוטה יונייטד, ארה"ב',age:28,cs:6}],
+    DEF:[{n:'Alphonso Davies',caps:58,g:5,cap:true,club:'באיירן מינכן, גרמניה',age:25,a:12},{n:'Moïse Bombito',caps:28,g:1,club:'נאשוויל SC, ארה"ב',age:25,a:1},{n:'Derek Cornelius',caps:35,g:2,club:'מלמה, שוודיה',age:27,a:2}],
+    MID:[{n:'Stephen Eustáquio',caps:52,g:6,club:'פורטו, פורטוגל',age:28,a:9},{n:'Ismaël Koné',caps:24,g:2,club:'מרסיי, צרפת',age:24,a:4},{n:'Tajon Buchanan',caps:48,g:9,club:'וילארראל, ספרד',age:26,a:10}],
+    FWD:[{n:'Jonathan David',caps:62,g:32,goal_pct:52,club:'יובנטוס, איטליה',age:25,a:14},{n:'Cyle Larin',caps:78,g:30,goal_pct:38,club:'מאיורקה, ספרד',age:30,a:10},{n:'Jacob Shaffelburg',caps:30,g:4,goal_pct:13,club:'נאשוויל SC, ארה"ב',age:25,a:5}]
   },
   'בוסניה': {
-    GK:[{n:'Nikola Vasilj',caps:24,g:0},{n:'Matej Delač',caps:12,g:0}],
-    DEF:[{n:'Sead Kolašinac',caps:88,g:5},{n:'Toni Šunjić',caps:42,g:2},{n:'Ajdin Hasić',caps:18,g:1}],
-    MID:[{n:'Gojko Cimirot',caps:64,g:5},{n:'Amer Gojak',caps:36,g:4},{n:'Anel Husić',caps:22,g:2}],
-    FWD:[{n:'Edin Džeko',caps:147,g:69,goal_pct:47,cap:true},{n:'Haris Tabaković',caps:32,g:14,goal_pct:44},{n:'Smail Prevljak',caps:20,g:6,goal_pct:30}]
+    GK:[{n:'Nikola Vasilj',caps:24,g:0,club:'יוניון ברלין, גרמניה',age:30,cs:9},{n:'Matej Delač',caps:12,g:0,club:'הינדה אל קרך, קזחסטן',age:33,cs:2}],
+    DEF:[{n:'Sead Kolašinac',caps:88,g:5,club:'אדנה דמירספור, טורקיה',age:32,a:10},{n:'Toni Šunjić',caps:42,g:2,club:'בוואויסטה, פורטוגל',age:32,a:3},{n:'Ajdin Hasić',caps:18,g:1,club:'נוצ\'טין, גרמניה',age:24,a:1}],
+    MID:[{n:'Gojko Cimirot',caps:64,g:5,club:'סטנדרד ליאז\', בלגיה',age:33,a:5},{n:'Amer Gojak',caps:36,g:4,club:'אנקרגוצו, טורקיה',age:28,a:6},{n:'Anel Husić',caps:22,g:2,club:'גזישהאיר באשקשהיר, טורקיה',age:25,a:2}],
+    FWD:[{n:'Edin Džeko',caps:147,g:69,goal_pct:47,cap:true,club:'פנרבחצ\'ה, טורקיה',age:40,a:27},{n:'Haris Tabaković',caps:32,g:14,goal_pct:44,club:'יאנג בויז, שווייץ',age:32,a:10},{n:'Smail Prevljak',caps:20,g:6,goal_pct:30,club:'יאהור יהלבה, פולין',age:30,a:4}]
   },
   'ארה"ב': {
-    GK:[{n:'Matt Turner',caps:42,g:0},{n:'Ethan Horvath',caps:16,g:0}],
-    DEF:[{n:'Sergiño Dest',caps:38,g:2},{n:'Antonee Robinson',caps:45,g:1},{n:'Chris Richards',caps:28,g:1},{n:'Tim Ream',caps:62,g:1}],
-    MID:[{n:'Weston McKennie',caps:68,g:12},{n:'Tyler Adams',caps:38,g:1},{n:'Yunus Musah',caps:35,g:2}],
-    FWD:[{n:'Christian Pulisic',caps:78,g:32,goal_pct:41,cap:true},{n:'Folarin Balogun',caps:18,g:6,goal_pct:33},{n:'Ricardo Pepi',caps:30,g:11,goal_pct:37}]
+    GK:[{n:'Matt Turner',caps:42,g:0,club:'קריסטל פאלאס, אנגליה',age:31,cs:18},{n:'Ethan Horvath',caps:16,g:0,club:'קמרון, נורווגיה',age:30,cs:4}],
+    DEF:[{n:'Sergiño Dest',caps:38,g:2,club:'PSV איינדהובן, הולנד',age:25,a:9},{n:'Antonee Robinson',caps:45,g:1,club:'פולהאם, אנגליה',age:28,a:10},{n:'Chris Richards',caps:28,g:1,club:'קריסטל פאלאס, אנגליה',age:25,a:1},{n:'Tim Ream',caps:62,g:1,club:'שארלוט FC, ארה"ב',age:38,a:2}],
+    MID:[{n:'Weston McKennie',caps:68,g:12,club:'יובנטוס, איטליה',age:27,a:10},{n:'Tyler Adams',caps:38,g:1,club:'בורנמות\', אנגליה',age:26,a:3},{n:'Yunus Musah',caps:35,g:2,club:'אטלנטה, איטליה',age:22,a:5}],
+    FWD:[{n:'Christian Pulisic',caps:78,g:32,goal_pct:41,cap:true,club:'מילאן, איטליה',age:27,a:24},{n:'Folarin Balogun',caps:18,g:6,goal_pct:33,club:'מאיורקה, ספרד',age:24,a:4},{n:'Ricardo Pepi',caps:30,g:11,goal_pct:37,club:'PSV איינדהובן, הולנד',age:22,a:8}]
   },
   'פרגוואי': {
-    GK:[{n:'Roberto Fernández',caps:14,g:0},{n:'Antony Silva',caps:32,g:0}],
-    DEF:[{n:'Gustavo Gómez',caps:78,g:6,cap:true},{n:'Alberto Espínola',caps:22,g:0},{n:'Omar Alderete',caps:48,g:2}],
-    MID:[{n:'Mathías Villasanti',caps:42,g:2},{n:'Damián Bobadilla',caps:18,g:1},{n:'Andrés Cubas',caps:24,g:1}],
-    FWD:[{n:'Miguel Almirón',caps:65,g:13,goal_pct:20},{n:'Julio Enciso',caps:24,g:5,goal_pct:21},{n:'Antonio Sanabria',caps:38,g:9,goal_pct:24}]
+    GK:[{n:'Roberto Fernández',caps:14,g:0,club:'אסטיגארסה, פרגוואי',age:24,cs:5},{n:'Antony Silva',caps:32,g:0,club:'אטלס, מקסיקו',age:39,cs:12}],
+    DEF:[{n:'Gustavo Gómez',caps:78,g:6,cap:true,club:'פלמיירס, ברזיל',age:34,a:4},{n:'Alberto Espínola',caps:22,g:0,club:'נסיונל אסונסיון, פרגוואי',age:29,a:1},{n:'Omar Alderete',caps:48,g:2,club:'גטאפה, ספרד',age:28,a:2}],
+    MID:[{n:'Mathías Villasanti',caps:42,g:2,club:'גרמיו, ברזיל',age:28,a:3},{n:'Damián Bobadilla',caps:18,g:1,club:'ססקה מוסקבה, רוסיה',age:24,a:2},{n:'Andrés Cubas',caps:24,g:1,club:'ונקובר וויטקפס, קנדה',age:29,a:4}],
+    FWD:[{n:'Miguel Almirón',caps:65,g:13,goal_pct:20,club:'ניוקאסל, אנגליה',age:32,a:15},{n:'Julio Enciso',caps:24,g:5,goal_pct:21,club:'בריינטפורד, אנגליה',age:22,a:6},{n:'Antonio Sanabria',caps:38,g:9,goal_pct:24,club:'טורינו, איטליה',age:29,a:7}]
   },
 };
 
@@ -1918,6 +1925,7 @@ function renderSquadPanel(m, side){
         <div class="squad-player-avatar" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})">${initials}</div>
         <div class="squad-player-info">
           <div class="squad-player-name">${p.n}</div>
+          ${p.club?`<div style="font-size:.6rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.club}</div>`:''}
           <div class="squad-player-stats">
             <span class="squad-stat-pill">🎮 ${p.caps} משחקים</span>
             <span class="squad-stat-pill">⚽ ${p.g}</span>
