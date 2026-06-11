@@ -2,7 +2,8 @@
   "name": "מונדיאל 2026",
   "short_name": "מונדיאל 26",
   "description": "ניתוח הימורים חי — מונדיאל 2026",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#f59e0b",
@@ -11,13 +12,13 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

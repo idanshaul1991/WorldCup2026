@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מונדיאל 2026 — ניתוח הימורים חי</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="מונדיאל 26">
@@ -254,6 +254,22 @@ body.light .pos-badge.p4{background:#fee2e2;color:#991b1b}
 .squad-goal-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,#10b981,#4ade80)}
 .squad-captain-badge{position:absolute;top:6px;left:6px;background:var(--gold);color:#0a0a0f;font-size:.55rem;font-weight:900;padding:1px 5px;border-radius:5px}
 .squad-loading{padding:30px 20px;text-align:center;color:var(--muted);font-size:.8rem}
+.squad-player{cursor:pointer}
+@media(max-width:480px){.squad-player-name{white-space:normal;line-height:1.25}.squad-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+/* ── PLAYER MODAL ── */
+.pm-header{display:flex;align-items:center;gap:14px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.pm-avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;color:#fff;flex-shrink:0;box-shadow:0 3px 10px rgba(0,0,0,.35);border:3px solid rgba(255,255,255,.15)}
+.pm-name{font-size:1.05rem;font-weight:900;color:var(--text)}
+.pm-sub{font-size:.78rem;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pm-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.pm-stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+.pm-stat-val{font-size:1.25rem;font-weight:900;color:var(--gold)}
+.pm-stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px}
+.pm-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.pm-row:last-child{border-bottom:none}
+.pm-row-lbl{color:var(--muted)}
+.pm-row-val{font-weight:700;color:var(--text)}
+body.light .pm-stat-box{background:#f1f5f9}
 body.light .squad-panel{background:#f8fafc}
 body.light .squad-player{background:linear-gradient(160deg,#fff,#f1f5f9)}
 body.light .squad-player-stats{color:#64748b}
@@ -342,6 +358,17 @@ body.light .squad-goal-bar-wrap{background:#e2e8f0}
       <div style="font-size:.78rem;font-weight:700;color:var(--gold);margin-bottom:8px">🔥 חדשות אחרונות על הקבוצות</div>
       <div id="h2h-news" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;min-height:60px"></div>
     </div>
+  </div>
+</div>
+
+<!-- PLAYER MODAL -->
+<div class="modal-overlay" id="player-modal" style="display:none" onclick="if(event.target===this)closePlayerModal()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" id="player-title">פרטי שחקן</div>
+      <button class="modal-close" onclick="closePlayerModal()">✕</button>
+    </div>
+    <div class="modal-body" id="player-body"></div>
   </div>
 </div>
 
@@ -752,7 +779,8 @@ function renderMatches(){
     const isT=d===today;
     html+=`<div class="date-group" data-date="${d}">`;
     html+=`<div style="font-size:.78rem;font-weight:700;color:${isT?'var(--gold)':'var(--muted)'};margin:${di>0?'16px':0} 0 8px">${isT?'🔴 היום — ':''}${byDate[d][0].date} (${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date(d).getDay()]})</div>`;
-    byDate[d].forEach(m=>{ html+=renderMatchCard(m); });
+    const dayMatches=[...byDate[d]].sort((a,b)=>getMatchUTC(a)-getMatchUTC(b));
+    dayMatches.forEach(m=>{ html+=renderMatchCard(m); });
     html+=`</div>`;
   });
   const remaining=allDates.length-showDates.length;
@@ -1491,8 +1519,58 @@ function closeH2H(){
   document.body.style.overflow='';
 }
 
+function showPlayerModal(teamName, posKey, playerName){
+  const squad = getSquad(teamName);
+  if(!squad || !squad[posKey]) return;
+  const p = squad[posKey].find(x=>x.n===playerName);
+  if(!p) return;
+  const colors = TEAM_COLORS[teamName] || DEFAULT_TEAM_COLORS;
+  const initials = getInitials(p.n);
+  const meta = POS_META[posKey];
+  const team = MATCHES.flatMap(m=>[{n:m.home,f:m.hf},{n:m.away,f:m.af}]).find(t=>t.n===teamName) || {f:''};
+
+  // Tier badge by experience
+  let tier, tierColor;
+  if(p.caps>=100){tier='אגדה 🌟';tierColor='#fbbf24';}
+  else if(p.caps>=60){tier='ותיק';tierColor='#60a5fa';}
+  else if(p.caps>=30){tier='מנוסה';tierColor='#4ade80';}
+  else {tier='כוכב עולה';tierColor='#f472b6';}
+
+  const goalsPerCap = p.caps>0 ? ((p.g/p.caps)*100).toFixed(0) : 0;
+
+  let html = `<div class="pm-header">
+    <div class="pm-avatar" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})">${initials}</div>
+    <div>
+      <div class="pm-name">${p.n}</div>
+      <div class="pm-sub">${team.f} ${teamName} · ${meta.label} ${p.cap?' · © קפטן':''}</div>
+      <div class="pm-sub"><span style="background:${tierColor}22;color:${tierColor};padding:1px 8px;border-radius:10px;font-weight:800;font-size:.68rem">${tier}</span></div>
+    </div>
+  </div>
+  <div class="pm-stats-grid">
+    <div class="pm-stat-box"><div class="pm-stat-val">${p.caps}</div><div class="pm-stat-lbl">הופעות נבחרת</div></div>
+    <div class="pm-stat-box"><div class="pm-stat-val">${p.g}</div><div class="pm-stat-lbl">שערים</div></div>
+  </div>`;
+
+  if(p.goal_pct!=null){
+    html += `<div class="pm-row"><span class="pm-row-lbl">מעורבות במשחק (% משחקים עם גול)</span><span class="pm-row-val" style="color:#4ade80">${p.goal_pct}%</span></div>`;
+  }
+  html += `<div class="pm-row"><span class="pm-row-lbl">יחס שערים להופעות</span><span class="pm-row-val">${goalsPerCap}%</span></div>`;
+  html += `<div class="pm-row"><span class="pm-row-lbl">תפקיד</span><span class="pm-row-val">${meta.label}</span></div>`;
+  html += `<div class="pm-row"><span class="pm-row-lbl">נבחרת</span><span class="pm-row-val">${team.f} ${teamName}</span></div>`;
+
+  document.getElementById('player-title').textContent=p.n;
+  document.getElementById('player-body').innerHTML=html;
+  document.getElementById('player-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closePlayerModal(){
+  document.getElementById('player-modal').style.display='none';
+  document.body.style.overflow='';
+}
+
 // Close modal on Escape
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeH2H();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeH2H();closePlayerModal();}});
 
 // ===================== DAILY ODDS UPDATE =====================
 // Runs once per day, fetches updated odds via AI web search
@@ -1815,6 +1893,10 @@ function getInitials(name){
   return name.substring(0,2).toUpperCase();
 }
 
+function esc(s){
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
 function renderSquadPanel(m, side){
   const teamName = side==='home' ? m.home : m.away;
   const squad = getSquad(teamName);
@@ -1831,7 +1913,7 @@ function renderSquadPanel(m, side){
       <div class="squad-grid">`;
     squad[pos].forEach(p=>{
       const initials = getInitials(p.n);
-      html += `<div class="squad-player">
+      html += `<div class="squad-player" onclick="showPlayerModal('${esc(teamName)}','${pos}','${esc(p.n)}')">
         ${p.cap?'<div class="squad-captain-badge">© קפטן</div>':''}
         <div class="squad-player-avatar" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})">${initials}</div>
         <div class="squad-player-info">
