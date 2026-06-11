@@ -434,13 +434,24 @@ body.light .squad-goal-bar-wrap{background:#e2e8f0}
   </div>
   <div id="ai-box" class="ai-response" style="display:none"></div>
 
-  <div class="section-title mt14">🔥 חדשות אחרונות</div>
+  <div class="section-title mt14" style="display:flex;justify-content:space-between;align-items:center">
+    <span>🔥 חדשות אחרונות</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="news-ts" style="font-size:.65rem;color:var(--muted);font-weight:400"></span>
+      <button id="news-refresh-btn" class="cal-btn" onclick="loadNews()" style="font-size:.7rem;padding:4px 10px">🔄 עדכן</button>
+    </div>
+  </div>
   <div class="card" id="news-card">
     <div style="color:var(--muted);font-size:.82rem">לחץ "עדכן" לטעינת חדשות...</div>
   </div>
 
-  <div class="section-title mt14">📈 יומן שינויי אודס</div>
-  <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px">מתעדכן כל שעתיים ע"י AI עם הסבר לכל שינוי</div>
+  <div class="section-title mt14" style="display:flex;justify-content:space-between;align-items:center">
+    <span>📈 יומן שינויי אודס</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="oddslog-ts" style="font-size:.65rem;color:var(--muted);font-weight:400"></span>
+      <button id="oddslog-refresh-btn" class="cal-btn" onclick="loadOddsLog()" style="font-size:.7rem;padding:4px 10px">🔄 עדכן</button>
+    </div>
+  </div>
   <div class="card" id="odds-log-card">
     <div style="color:var(--muted);font-size:.82rem">לחץ "עדכן" לטעינת עדכוני אודס...</div>
   </div>
@@ -1064,8 +1075,34 @@ async function askAI(){
   btn.disabled=false; btn.textContent='⚡ שאל';
 }
 
+function timeAgoLabel(ts){
+  const diff=Date.now()-ts;
+  const mins=Math.floor(diff/60000);
+  if(mins<1) return 'הרגע';
+  if(mins<60) return `לפני ${mins} דק'`;
+  const hrs=Math.floor(mins/60);
+  if(hrs<24) return `לפני ${hrs} שע'`;
+  return `לפני ${Math.floor(hrs/24)} ימים`;
+}
+
+function renderCached(key, cardId, tsId, renderFn){
+  const cached=localStorage.getItem(key);
+  const card=document.getElementById(cardId);
+  const tsEl=document.getElementById(tsId);
+  if(cached){
+    try{
+      const {html,ts}=JSON.parse(cached);
+      card.innerHTML=html;
+      if(tsEl) tsEl.textContent=`עודכן ${timeAgoLabel(ts)}`;
+    }catch{}
+  }
+}
+
 async function loadNews(){
   const card=document.getElementById('news-card');
+  const tsEl=document.getElementById('news-ts');
+  const btn=document.getElementById('news-refresh-btn');
+  if(btn) btn.disabled=true;
   card.innerHTML=`<div style="color:var(--muted)"><span class="spinner"></span> טוען חדשות עדכניות...</div>`;
   try{
     const data = await callAI({
@@ -1075,16 +1112,24 @@ async function loadNews(){
     });
     const text = data.content?.map(c=>c.text||'').join('')||'';
     let items; try{const mm=text.match(/\{[\s\S]*\}/);items=mm?JSON.parse(mm[0]).news:null;}catch{items=null;}
-    card.innerHTML = items?.length
+    const html = items?.length
       ? items.map(n=>`<div class="news-item"><div class="news-dot"></div><div class="news-text"><strong>${n.title}</strong><br>${n.detail}<div class="news-time">⏰ ${n.time}</div></div></div>`).join('')
       : `<div style="font-size:.82rem;white-space:pre-wrap">${text.substring(0,500)}</div>`;
+    card.innerHTML=html;
+    const ts=Date.now();
+    localStorage.setItem('wc_news_cache',JSON.stringify({html,ts}));
+    if(tsEl) tsEl.textContent=`עודכן ${timeAgoLabel(ts)}`;
   }catch(e){
     card.innerHTML=`<div style="color:#f87171;font-size:.82rem">❌ ${e.message}</div>`;
   }
+  if(btn) btn.disabled=false;
 }
 
 async function loadOddsLog(){
   const card=document.getElementById('odds-log-card');
+  const tsEl=document.getElementById('oddslog-ts');
+  const btn=document.getElementById('oddslog-refresh-btn');
+  if(btn) btn.disabled=true;
   card.innerHTML=`<div style="color:var(--muted)"><span class="spinner"></span> טוען שינויי אודס...</div>`;
   try{
     const data = await callAI({
@@ -1094,12 +1139,17 @@ async function loadOddsLog(){
     });
     const text = data.content?.map(c=>c.text||'').join('')||'';
     let items; try{const mm=text.match(/\{[\s\S]*\}/);items=mm?JSON.parse(mm[0]).changes:null;}catch{items=null;}
-    card.innerHTML = items?.length
+    const html = items?.length
       ? items.map(c=>`<div class="odds-log-item"><div class="odds-log-time">${c.time}</div><div class="odds-log-text"><strong>${c.team}</strong>: ${c.reason}</div><div class="odds-log-change ${c.direction==='up'?'up':'down'}">${c.from} → ${c.to} ${c.direction==='up'?'📈':'📉'}</div></div>`).join('')
       : `<div style="font-size:.82rem;white-space:pre-wrap">${text.substring(0,500)}</div>`;
+    card.innerHTML=html;
+    const ts=Date.now();
+    localStorage.setItem('wc_oddslog_cache',JSON.stringify({html,ts}));
+    if(tsEl) tsEl.textContent=`עודכן ${timeAgoLabel(ts)}`;
   }catch(e){
     card.innerHTML=`<div style="color:#f87171;font-size:.82rem">❌ ${e.message}</div>`;
   }
+  if(btn) btn.disabled=false;
 }
 
 // ===================== TABS / INIT =====================
@@ -1108,19 +1158,16 @@ function showTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   el.classList.add('active');
-  if(name==='ai'){loadNews();setTimeout(loadOddsLog,5000);}
+  if(name==='ai'){
+    renderCached('wc_news_cache','news-card','news-ts');
+    renderCached('wc_oddslog_cache','odds-log-card','oddslog-ts');
+  }
 }
 
 function refreshAll(){
   document.getElementById('last-update').textContent=`עודכן: ${new Date().toLocaleTimeString('he-IL')}`;
   renderMatches();
-  if(document.getElementById('tab-ai').classList.contains('active')){loadNews();setTimeout(loadOddsLog,5000);}
 }
-
-// Auto-refresh odds log every 2 hours
-setInterval(()=>{
-  if(document.getElementById('tab-ai').classList.contains('active')) loadOddsLog();
-}, 2*60*60*1000);
 
 // ===================== THEME =====================
 function toggleTheme(){
