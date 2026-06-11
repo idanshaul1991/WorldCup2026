@@ -215,6 +215,19 @@ body.light .prog-bar{background:#e2e8f0}
 .sum-val{font-size:1.05rem;font-weight:900}
 .sum-lbl{font-size:.6rem;color:var(--muted);margin-top:2px}
 @media(max-width:560px){.bet-form{grid-template-columns:1fr 70px}.bet-add-btn{grid-column:1/-1}.bet-summary{grid-template-columns:repeat(2,1fr)}}
+/* ── SQUAD PANEL ── */
+.squad-panel{display:none;border-top:1px solid var(--border);background:#08080f}
+.squad-panel.open{display:block}
+.squad-tabs{display:flex;border-bottom:1px solid var(--border)}
+.squad-tab{flex:1;padding:8px;background:none;border:none;color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s}
+.squad-tab.active{color:var(--gold);border-bottom:2px solid var(--gold)}
+.squad-grid{padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.squad-player{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;transition:border-color .2s}
+.squad-player:hover{border-color:var(--gold)}
+.squad-player-name{font-size:.78rem;font-weight:700;color:var(--text)}
+.squad-player-pos{font-size:.62rem;color:var(--muted);margin-top:1px}
+.squad-player-stats{font-size:.68rem;color:var(--gold);margin-top:3px}
+.squad-loading{padding:20px;text-align:center;color:var(--muted);font-size:.8rem}
 /* ── SEARCH ── */
 .search-wrap{position:relative;margin-bottom:12px}
 .search-input{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px 14px 10px 36px;border-radius:10px;font-size:.88rem;outline:none;font-family:inherit}
@@ -269,7 +282,6 @@ body.light .prog-bar{background:#e2e8f0}
     <button class="tab" onclick="showTab('groups',this)">🗂 בתים</button>
     <button class="tab" onclick="showTab('knockout',this)">⚔️ נוק-אאוט</button>
     <button class="tab" onclick="showTab('odds',this)">📊 אודס</button>
-    <button class="tab" onclick="showTab('bets',this)">💰 הימורים</button>
     <button class="tab" onclick="showTab('ai',this)">🤖 AI</button>
   </div>
 </div>
@@ -321,24 +333,7 @@ body.light .prog-bar{background:#e2e8f0}
   <div id="odds-content"></div>
 </div>
 
-<!-- ===== BETS ===== -->
-<div id="tab-bets" class="section">
-  <div class="section-title">💰 מעקב הימורים אישי</div>
-  <div class="bet-summary" id="bet-summary"></div>
-  <div class="card">
-    <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px">הוסף הימור חדש</div>
-    <div class="bet-form">
-      <input class="bet-input" id="bet-desc" placeholder="תיאור (לדוגמה: הולנד לזכות)">
-      <input class="bet-input" id="bet-amt" placeholder="₪ סכום" type="number" min="1">
-      <button class="bet-add-btn" onclick="addBet()">+ הוסף</button>
-    </div>
-    <div id="bet-list"></div>
-  </div>
-  <div class="card" style="margin-top:8px;font-size:.75rem;color:var(--muted);line-height:1.7">
-    💡 לחץ על הסטטוס של כל הימור כדי לשנות בין <strong style="color:#4ade80">זכייה</strong> / <strong style="color:#f87171">הפסד</strong> / ממתין<br>
-    ℹ️ ההימורים נשמרים בדפדפן שלך (localStorage)
-  </div>
-</div>
+
 
 <!-- ===== AI ===== -->
 <div id="tab-ai" class="section">
@@ -400,22 +395,22 @@ const MATCHES = [
   {id:'A2',g:'A',md:1,date:'12.06',iso:'2026-06-12',tIL:'05:00*',home:'קוריאה הדרומית',hf:'🇰🇷',away:"צ'כיה",af:'🇨🇿',venue:'אקרון, גוודלחרה',hw:42,d:28,aw:30,pred:'1-1'},
   // B
   {id:'B1',g:'B',md:1,date:'12.06',iso:'2026-06-12',tIL:'22:00',home:'קנדה',hf:'🇨🇦',away:'בוסניה',af:'🇧🇦',venue:'BMO Field, טורונטו',hw:48,d:26,aw:26,pred:'2-1'},
-  {id:'B2',g:'B',md:1,date:'13.06',iso:'2026-06-13',tIL:'01:00*',home:"שווייץ",hf:'🇨🇭',away:'קטר',af:'🇶🇦',venue:'BC Place, ונקובר',hw:72,d:18,aw:10,pred:'3-0'},
+  {id:'B2',g:'B',md:1,date:'13.06',iso:'2026-06-13',tIL:'22:00',home:"שווייץ",hf:'🇨🇭',away:'קטר',af:'🇶🇦',venue:'BC Place, ונקובר',hw:72,d:18,aw:10,pred:'3-0'},
   // C
   {id:'C1',g:'C',md:1,date:'14.06',iso:'2026-06-14',tIL:'01:00*',home:'ברזיל',hf:'🇧🇷',away:'מרוקו',af:'🇲🇦',venue:'MetLife, ניו-ג\'רזי',hw:58,d:22,aw:20,pred:'2-1'},
   {id:'C2',g:'C',md:1,date:'14.06',iso:'2026-06-14',tIL:'04:00*',home:'האיטי',hf:'🇭🇹',away:'סקוטלנד',af:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',venue:'AT&T Stadium, דאלאס',hw:12,d:20,aw:68,pred:'0-3'},
   // D
-  {id:'D1',g:'D',md:1,date:'12.06',iso:'2026-06-12',tIL:'22:00',home:"ארה\"ב",hf:'🇺🇸',away:'פרגוואי',af:'🇵🇾',venue:'SoFi Stadium, לוס אנג\'לס',hw:68,d:20,aw:12,pred:'2-0',note:'ביתיים בלוס אנג\'לס!',mypick:false},
-  {id:'D2',g:'D',md:1,date:'13.06',iso:'2026-06-13',tIL:'01:00*',home:'אוסטרליה',hf:'🇦🇺',away:'טורקיה',af:'🇹🇷',venue:'NRG, יוסטון',hw:38,d:28,aw:34,pred:'1-1'},
+  {id:'D1',g:'D',md:1,date:'12.06',iso:'2026-06-12',tIL:'04:00*',home:"ארה\"ב",hf:'🇺🇸',away:'פרגוואי',af:'🇵🇾',venue:'SoFi Stadium, לוס אנג\'לס',hw:68,d:20,aw:12,pred:'2-0',note:'ביתיים בלוס אנג\'לס!',mypick:false},
+  {id:'D2',g:'D',md:1,date:'13.06',iso:'2026-06-13',tIL:'07:00',home:'אוסטרליה',hf:'🇦🇺',away:'טורקיה',af:'🇹🇷',venue:'NRG, יוסטון',hw:38,d:28,aw:34,pred:'1-1'},
   // E
-  {id:'E1',g:'E',md:1,date:'14.06',iso:'2026-06-14',tIL:'22:00',home:'גרמניה',hf:'🇩🇪',away:'קוראסאו',af:'🇨🇼',venue:'Gillette Stadium, בוסטון',hw:92,d:6,aw:2,pred:'5-0'},
-  {id:'E2',g:'E',md:1,date:'15.06',iso:'2026-06-15',tIL:'01:00*',home:"חוף השנהב",hf:'🇨🇮',away:'אקוודור',af:'🇪🇨',venue:'Hard Rock, מיאמי',hw:44,d:28,aw:28,pred:'1-1'},
+  {id:'E1',g:'E',md:1,date:'14.06',iso:'2026-06-14',tIL:'20:00',home:'גרמניה',hf:'🇩🇪',away:'קוראסאו',af:'🇨🇼',venue:'Gillette Stadium, בוסטון',hw:92,d:6,aw:2,pred:'5-0'},
+  {id:'E2',g:'E',md:1,date:'15.06',iso:'2026-06-15',tIL:'02:00*',home:"חוף השנהב",hf:'🇨🇮',away:'אקוודור',af:'🇪🇨',venue:'Hard Rock, מיאמי',hw:44,d:28,aw:28,pred:'1-1'},
   // F
-  {id:'F1',g:'F',md:1,date:'14.06',iso:'2026-06-14',tIL:'19:00',home:'הולנד',hf:'🇳🇱',away:'יפן',af:'🇯🇵',venue:'AT&T Stadium, דאלאס',hw:56,d:24,aw:20,pred:'2-1',note:'⭐ הימור שלי — הולנד!',mypick:true},
-  {id:'F2',g:'F',md:1,date:'15.06',iso:'2026-06-15',tIL:'01:00*',home:'שוודיה',hf:'🇸🇪',away:'תוניסיה',af:'🇹🇳',venue:'Levi\'s, סנטה קלרה',hw:52,d:26,aw:22,pred:'2-0'},
+  {id:'F1',g:'F',md:1,date:'14.06',iso:'2026-06-14',tIL:'23:00',home:'הולנד',hf:'🇳🇱',away:'יפן',af:'🇯🇵',venue:'AT&T Stadium, דאלאס',hw:56,d:24,aw:20,pred:'2-1',note:'⭐ הימור שלי — הולנד!',mypick:true},
+  {id:'F2',g:'F',md:1,date:'15.06',iso:'2026-06-15',tIL:'05:00*',home:'שוודיה',hf:'🇸🇪',away:'תוניסיה',af:'🇹🇳',venue:'Levi\'s, סנטה קלרה',hw:52,d:26,aw:22,pred:'2-0'},
   // G
   {id:'G1',g:'G',md:1,date:'15.06',iso:'2026-06-15',tIL:'22:00',home:'בלגיה',hf:'🇧🇪',away:'ניו זילנד',af:'🇳🇿',venue:'SoFi, לוס אנג\'לס',hw:88,d:8,aw:4,pred:'4-0'},
-  {id:'G2',g:'G',md:1,date:'16.06',iso:'2026-06-16',tIL:'01:00*',home:'מצרים',hf:'🇪🇬',away:'איראן',af:'🇮🇷',venue:'Lumen Field, סיאטל',hw:44,d:30,aw:26,pred:'1-1'},
+  {id:'G2',g:'G',md:1,date:'16.06',iso:'2026-06-16',tIL:'04:00*',home:'מצרים',hf:'🇪🇬',away:'איראן',af:'🇮🇷',venue:'Lumen Field, סיאטל',hw:44,d:30,aw:26,pred:'1-1'},
   // H
   {id:'H1',g:'H',md:1,date:'15.06',iso:'2026-06-15',tIL:'19:00',home:'ספרד',hf:'🇪🇸',away:'כף ורדה',af:'🇨🇻',venue:'SoFi, לוס אנג\'לס',hw:95,d:4,aw:1,pred:'5-0',note:'⭐ ספרד — מועמדת ראשית!'},
   {id:'H2',g:'H',md:1,date:'16.06',iso:'2026-06-16',tIL:'01:00*',home:'אורוגוואי',hf:'🇺🇾',away:'ערב הסעודית',af:'🇸🇦',venue:'AT&T, דאלאס',hw:62,d:22,aw:16,pred:'2-0'},
@@ -423,14 +418,14 @@ const MATCHES = [
   {id:'I1',g:'I',md:1,date:'16.06',iso:'2026-06-16',tIL:'22:00',home:'צרפת',hf:'🇫🇷',away:'עיראק',af:'🇮🇶',venue:'Mercedes-Benz, אטלנטה',hw:94,d:4,aw:2,pred:'5-0'},
   {id:'I2',g:'I',md:1,date:'17.06',iso:'2026-06-17',tIL:'01:00*',home:'נורבגיה',hf:'🇳🇴',away:'סנגל',af:'🇸🇳',venue:'Arrowhead, קנזס סיטי',hw:52,d:24,aw:24,pred:'2-1',note:'🔥 נורבגיה+הולנד בבית I — מרוץ!'},
   // J
-  {id:'J1',g:'J',md:1,date:'16.06',iso:'2026-06-16',tIL:'19:00',home:'ארגנטינה',hf:'🇦🇷',away:'ירדן',af:'🇯🇴',venue:'Hard Rock, מיאמי',hw:94,d:4,aw:2,pred:'5-0'},
-  {id:'J2',g:'J',md:1,date:'17.06',iso:'2026-06-17',tIL:'01:00*',home:'אוסטריה',hf:'🇦🇹',away:"אלג'יריה",af:'🇩🇿',venue:'Lincoln Financial, פילדלפיה',hw:50,d:26,aw:24,pred:'1-0'},
+  {id:'J1',g:'J',md:1,date:'16.06',iso:'2026-06-16',tIL:'04:00*',home:'ארגנטינה',hf:'🇦🇷',away:'ירדן',af:'🇯🇴',venue:'Hard Rock, מיאמי',hw:94,d:4,aw:2,pred:'5-0'},
+  {id:'J2',g:'J',md:1,date:'17.06',iso:'2026-06-17',tIL:'07:00',home:'אוסטריה',hf:'🇦🇹',away:"אלג'יריה",af:'🇩🇿',venue:'Lincoln Financial, פילדלפיה',hw:50,d:26,aw:24,pred:'1-0'},
   // K
   {id:'K1',g:'K',md:1,date:'17.06',iso:'2026-06-17',tIL:'22:00',home:'פורטוגל',hf:'🇵🇹',away:'אוזבקיסטן',af:'🇺🇿',venue:'Arrowhead, קנזס סיטי',hw:92,d:6,aw:2,pred:'5-0'},
-  {id:'K2',g:'K',md:1,date:'18.06',iso:'2026-06-18',tIL:'01:00*',home:'קולומביה',hf:'🇨🇴',away:'קונגו DR',af:'🇨🇩',venue:'Gillette, בוסטון',hw:62,d:22,aw:16,pred:'3-1'},
+  {id:'K2',g:'K',md:1,date:'18.06',iso:'2026-06-18',tIL:'04:00*',home:'קולומביה',hf:'🇨🇴',away:'קונגו DR',af:'🇨🇩',venue:'Gillette, בוסטון',hw:62,d:22,aw:16,pred:'3-1'},
   // L
-  {id:'L1',g:'L',md:1,date:'17.06',iso:'2026-06-17',tIL:'19:00',home:'אנגליה',hf:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',away:'גאנה',af:'🇬🇭',venue:'MetLife, ניו-ג\'רזי',hw:82,d:12,aw:6,pred:'3-0'},
-  {id:'L2',g:'L',md:1,date:'18.06',iso:'2026-06-18',tIL:'01:00*',home:'קרואטיה',hf:'🇭🇷',away:'פנמה',af:'🇵🇦',venue:'Levi\'s, סנטה קלרה',hw:64,d:22,aw:14,pred:'2-0'},
+  {id:'L1',g:'L',md:1,date:'17.06',iso:'2026-06-17',tIL:'01:00*',home:'אנגליה',hf:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',away:'גאנה',af:'🇬🇭',venue:'MetLife, ניו-ג\'רזי',hw:82,d:12,aw:6,pred:'3-0'},
+  {id:'L2',g:'L',md:1,date:'18.06',iso:'2026-06-18',tIL:'07:00',home:'קרואטיה',hf:'🇭🇷',away:'פנמה',af:'🇵🇦',venue:'Levi\'s, סנטה קלרה',hw:64,d:22,aw:14,pred:'2-0'},
   // ── MATCHDAY 2 ──
   {id:'A3',g:'A',md:2,date:'18.06',iso:'2026-06-18',tIL:'19:00',home:"צ'כיה",hf:'🇨🇿',away:'דרום אפריקה',af:'🇿🇦',venue:'Mercedes-Benz, אטלנטה',hw:58,d:24,aw:18,pred:'2-0'},
   {id:'A4',g:'A',md:2,date:'19.06',iso:'2026-06-19',tIL:'02:00*',home:'מקסיקו',hf:'🇲🇽',away:'קוריאה הדרומית',af:'🇰🇷',venue:'אקרון, גוודלחרה',hw:52,d:24,aw:24,pred:'1-1'},
@@ -802,6 +797,13 @@ function renderMatchCard(m){
     <div class="team-side away"><span class="tflag">${m.af}</span><span class="tname">${m.away}</span></div>
   </div>
   ${eventsHTML}
+  <div class="squad-panel" id="squad-${m.id}">
+    <div class="squad-tabs">
+      <button class="squad-tab active" id="sqt-home-${m.id}" onclick="toggleSquad('${m.id}','home')">${m.hf} ${m.home}</button>
+      <button class="squad-tab" id="sqt-away-${m.id}" onclick="toggleSquad('${m.id}','away')">${m.af} ${m.away}</button>
+    </div>
+    <div class="squad-content"></div>
+  </div>
   <div class="odds-row">
     <div class="odd-p"><div class="odd-lbl">${m.home}</div><div class="odd-pct">${m.hw}%</div></div>
     <div class="odd-p"><div class="odd-lbl">תיקו</div><div class="odd-pct">${m.d}%</div></div>
@@ -812,6 +814,7 @@ function renderMatchCard(m){
     ${m.note?`&nbsp;&nbsp;<span style="color:#86efac;font-size:.7rem">${m.note}</span>`:''}
   </button>
   <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-top:1px solid var(--border);background:var(--bg3)">
+    <button onclick="toggleSquad('${m.id}','home')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:7px;font-size:.68rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#10b981';this.style.color='#10b981'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">👥 סגל</button>
     <button onclick="showH2H('${m.id}')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:7px;font-size:.68rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#8b5cf6'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📊 ראש בראש</button>
     <button onclick="addToCalendar('${m.id}')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:7px;font-size:.68rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📅 הוסף ליומן</button>
   </div>
@@ -1048,15 +1051,20 @@ function initTheme(){
 
 // ===================== NEXT MATCH BANNER =====================
 let countdownTimer=null;
+function getMatchUTC(m){
+  const [h,min]=m.tIL.replace('*','').split(':').map(Number);
+  const [y,mo,d]=m.iso.split('-').map(Number);
+  // IL = UTC+3, so UTC = IL - 3
+  let uh=h-3, ud=d, umo=mo, uy=y;
+  if(uh<0){uh+=24;ud--;}
+  return Date.UTC(uy,umo-1,ud,uh,min);
+}
+
 function renderNextMatchBanner(){
-  const now=new Date();
+  const now=Date.now();
   const upcoming=MATCHES.filter(m=>{
-    const [h,min]=m.tIL.replace('*','').split(':').map(Number);
-    const d=new Date(m.iso+'T00:00:00');
-    // Convert IL time to UTC (IL = UTC+3)
-    d.setHours(h-3,min);
-    return d>now;
-  }).sort((a,b)=>a.iso.localeCompare(b.iso));
+    return getMatchUTC(m)>now;
+  }).sort((a,b)=>getMatchUTC(a)-getMatchUTC(b));
 
   const el=document.getElementById('next-match-banner');
   if(!el||!upcoming.length){if(el)el.innerHTML='';return;}
@@ -1068,8 +1076,9 @@ function renderNextMatchBanner(){
 
   if(countdownTimer) clearInterval(countdownTimer);
 
+  const matchUTC=getMatchUTC(next);
   function updateCountdown(){
-    const diff=matchTime-new Date();
+    const diff=matchUTC-Date.now();
     if(diff<=0){el.innerHTML='';clearInterval(countdownTimer);return;}
     const hh=Math.floor(diff/3600000);
     const mm=Math.floor((diff%3600000)/60000);
@@ -1633,6 +1642,109 @@ function startLivePolling(){
     },interval);
   }
   smartPoll();
+}
+
+
+// ===================== SQUAD DATA =====================
+const SQUADS = {
+  'מקסיקו': {
+    GK:[{n:'Guillermo Ochoa',caps:152,g:0},{n:'Luis Malagón',caps:15,g:0}],
+    DEF:[{n:'César Montes',caps:48,g:2},{n:'Johan Vásquez',caps:35,g:1},{n:'Jesús Gallardo',caps:72,g:3},{n:'Gerardo Arteaga',caps:30,g:1}],
+    MID:[{n:'Edson Álvarez',caps:95,g:6},{n:'Héctor Herrera',caps:119,g:18},{n:'Carlos Rodríguez',caps:55,g:4}],
+    FWD:[{n:'Hirving Lozano',caps:88,g:17,goal_pct:19},{n:'Raúl Jiménez',caps:109,g:40,goal_pct:37},{n:'Henry Martín',caps:42,g:14,goal_pct:33},{n:'Roberto Alvarado',caps:38,g:8,goal_pct:21}]
+  },
+  'דרום אפריקה': {
+    GK:[{n:'Ronwen Williams',caps:45,g:0},{n:'Bruce Bvuma',caps:18,g:0}],
+    DEF:[{n:'Siyanda Xulu',caps:48,g:1},{n:'Rushine De Reuck',caps:32,g:2},{n:'Innocent Maela',caps:55,g:1}],
+    MID:[{n:'Themba Zwane',caps:62,g:10},{n:'Teboho Mokoena',caps:58,g:8},{n:'Ethan Ntsanwisi',caps:22,g:3}],
+    FWD:[{n:'Percy Tau',caps:76,g:14,goal_pct:18},{n:'Evidence Makgopa',caps:24,g:8,goal_pct:33},{n:'Lyle Foster',caps:28,g:6,goal_pct:21}]
+  },
+  'הולנד': {
+    GK:[{n:'Bart Verbruggen',caps:18,g:0},{n:'Mark Flekken',caps:12,g:0}],
+    DEF:[{n:'Virgil van Dijk',caps:68,g:7},{n:'Stefan de Vrij',caps:55,g:4},{n:'Denzel Dumfries',caps:52,g:8},{n:'Nathan Aké',caps:48,g:6}],
+    MID:[{n:'Frenkie de Jong',caps:62,g:8},{n:'Tijjani Reijnders',caps:24,g:5},{n:'Teun Koopmeiners',caps:38,g:12}],
+    FWD:[{n:'Cody Gakpo',caps:44,g:14,goal_pct:32},{n:'Donyell Malen',caps:38,g:10,goal_pct:26},{n:'Wout Weghorst',caps:55,g:14,goal_pct:25},{n:'Memphis Depay',caps:102,g:46,goal_pct:45}]
+  },
+  'ספרד': {
+    GK:[{n:'Unai Simón',caps:42,g:0},{n:'David Raya',caps:18,g:0}],
+    DEF:[{n:'Dani Carvajal',caps:80,g:4},{n:'Pau Cubarsí',caps:14,g:1},{n:'Aymeric Laporte',caps:52,g:5},{n:'Marc Cucurella',caps:35,g:3}],
+    MID:[{n:'Pedri',caps:38,g:5},{n:'Rodri',caps:58,g:8},{n:'Fabián Ruiz',caps:35,g:7}],
+    FWD:[{n:'Lamine Yamal',caps:28,g:8,goal_pct:29},{n:'Nico Williams',caps:24,g:6,goal_pct:25},{n:'Álvaro Morata',caps:82,g:36,goal_pct:44},{n:'Mikel Oyarzabal',caps:45,g:18,goal_pct:40}]
+  },
+  'צרפת': {
+    GK:[{n:'Mike Maignan',caps:28,g:0},{n:'Alphonse Areola',caps:22,g:0}],
+    DEF:[{n:'Jules Koundé',caps:48,g:2},{n:'William Saliba',caps:24,g:1},{n:'Théo Hernández',caps:42,g:6},{n:'Benjamin Pavard',caps:55,g:5}],
+    MID:[{n:'Aurélien Tchouaméni',caps:40,g:4},{n:'Antoine Griezmann',caps:132,g:56},{n:'Adrien Rabiot',caps:52,g:12}],
+    FWD:[{n:'Kylian Mbappé',caps:82,g:48,goal_pct:59},{n:'Ousmane Dembélé',caps:55,g:14,goal_pct:25},{n:'Marcus Thuram',caps:32,g:12,goal_pct:38}]
+  },
+  'ארגנטינה': {
+    GK:[{n:'Emiliano Martínez',caps:45,g:0},{n:'Franco Armani',caps:22,g:0}],
+    DEF:[{n:'Nahuel Molina',caps:48,g:8},{n:'Cristian Romero',caps:42,g:3},{n:'Lisandro Martínez',caps:38,g:4},{n:'Nicolás Tagliafico',caps:55,g:6}],
+    MID:[{n:'Rodrigo De Paul',caps:72,g:10},{n:'Enzo Fernández',caps:38,g:8},{n:'Alexis Mac Allister',caps:42,g:12}],
+    FWD:[{n:'Lionel Messi',caps:188,g:109,goal_pct:58},{n:'Lautaro Martínez',caps:68,g:30,goal_pct:44},{n:'Julián Álvarez',caps:42,g:18,goal_pct:43},{n:'Ángel Di María',caps:145,g:31,goal_pct:21}]
+  },
+  'ברזיל': {
+    GK:[{n:'Alisson',caps:82,g:0},{n:'Ederson',caps:45,g:0}],
+    DEF:[{n:'Éder Militão',caps:42,g:3},{n:'Marquinhos',caps:95,g:12},{n:'Wendell',caps:28,g:1},{n:'Danilo',caps:88,g:7}],
+    MID:[{n:'Casemiro',caps:82,g:8},{n:'Bruno Guimarães',caps:48,g:6},{n:'Lucas Paquetá',caps:58,g:12}],
+    FWD:[{n:'Vinícius Jr.',caps:52,g:24,goal_pct:46},{n:'Rodrygo',caps:42,g:15,goal_pct:36},{n:'Raphinha',caps:48,g:22,goal_pct:46},{n:'Gabriel Martinelli',caps:28,g:8,goal_pct:29}]
+  },
+  'אנגליה': {
+    GK:[{n:'Jordan Pickford',caps:68,g:0},{n:'Aaron Ramsdale',caps:18,g:0}],
+    DEF:[{n:'Kyle Walker',caps:88,g:2},{n:'John Stones',caps:72,g:4},{n:'Harry Maguire',caps:65,g:8},{n:'Luke Shaw',caps:48,g:4}],
+    MID:[{n:'Declan Rice',caps:52,g:6},{n:'Jude Bellingham',caps:38,g:14},{n:'Phil Foden',caps:45,g:12}],
+    FWD:[{n:'Harry Kane',caps:95,g:68,goal_pct:72},{n:'Bukayo Saka',caps:55,g:18,goal_pct:33},{n:'Raheem Sterling',caps:82,g:22,goal_pct:27},{n:'Marcus Rashford',caps:62,g:18,goal_pct:29}]
+  },
+};
+
+const POS_LABELS = {GK:'שוער',DEF:'הגנה',MID:'קישור',FWD:'התקפה'};
+
+function getSquad(teamName){
+  return SQUADS[teamName] || null;
+}
+
+function renderSquadPanel(m, side){
+  const teamName = side==='home' ? m.home : m.away;
+  const squad = getSquad(teamName);
+  if(!squad) return `<div class="squad-loading">אין נתוני סגל זמינים ל${teamName}</div>`;
+  
+  let html = '<div class="squad-grid">';
+  ['GK','DEF','MID','FWD'].forEach(pos=>{
+    if(!squad[pos]) return;
+    squad[pos].forEach(p=>{
+      html += `<div class="squad-player">
+        <div class="squad-player-name">${p.n}</div>
+        <div class="squad-player-pos">${POS_LABELS[pos]}</div>
+        <div class="squad-player-stats">
+          ${p.caps} משחקים · ${p.g} גולים
+          ${p.goal_pct ? `<span style="color:#4ade80"> · ${p.goal_pct}% לשער</span>` : ''}
+        </div>
+      </div>`;
+    });
+  });
+  html += '</div>';
+  return html;
+}
+
+let openSquads = {}; // { matchId: 'home'|'away' }
+
+function toggleSquad(matchId, side){
+  const panel = document.getElementById(`squad-${matchId}`);
+  const homeTab = document.getElementById(`sqt-home-${matchId}`);
+  const awayTab = document.getElementById(`sqt-away-${matchId}`);
+  const m = MATCHES.find(x=>x.id===matchId);
+  
+  if(openSquads[matchId]===side && panel.classList.contains('open')){
+    panel.classList.remove('open');
+    openSquads[matchId]=null;
+    return;
+  }
+  
+  openSquads[matchId]=side;
+  panel.classList.add('open');
+  homeTab.classList.toggle('active', side==='home');
+  awayTab.classList.toggle('active', side==='away');
+  panel.querySelector('.squad-content').innerHTML = renderSquadPanel(m, side);
 }
 
 window.onload=()=>{
