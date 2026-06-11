@@ -88,6 +88,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .bet-top-score{background:#0d0d18!important}
 .bet-top-score .bet-score-res{color:var(--gold2)}
 .pred-box{padding:8px 12px;font-size:.75rem;color:#9999bb;background:#0f0f18;border-top:1px solid var(--border)}
+.h2h-pred-box{background:#1a1500;border:1px solid #3a2a00;border-radius:10px;padding:12px}
+.h2h-pred-box .h2h-pred-text{color:#e2e2ec}
+.h2h-pred-highlight{color:var(--gold2)}
+body.light .h2h-pred-box{background:#fffbeb;border-color:#fde68a}
+body.light .h2h-pred-box .h2h-pred-text{color:#1a1a2e}
+body.light .h2h-pred-highlight{color:#b45309}
 .pred-box strong{color:var(--gold2)}
 
 /* ── GROUP ── */
@@ -1023,14 +1029,14 @@ async function callAI(payload, retries=2) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if(res.status===502||res.status===503){
-        if(attempt<retries){ await new Promise(r=>setTimeout(r,1500*(attempt+1))); continue; }
-        throw new Error('שגיאת שרת זמנית — נסה שוב');
+      if(res.status===502||res.status===503||res.status===429){
+        if(attempt<retries){ await new Promise(r=>setTimeout(r,2500*(attempt+1))); continue; }
+        throw new Error(res.status===429?'יותר מדי בקשות כרגע — נסה שוב בעוד רגע':'שגיאת שרת זמנית — נסה שוב');
       }
       if(!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
       return res.json();
     }catch(e){
-      if(attempt<retries){ await new Promise(r=>setTimeout(r,1500*(attempt+1))); continue; }
+      if(attempt<retries){ await new Promise(r=>setTimeout(r,2500*(attempt+1))); continue; }
       throw e;
     }
   }
@@ -1102,13 +1108,13 @@ function showTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   el.classList.add('active');
-  if(name==='ai'){loadNews();setTimeout(loadOddsLog,2000);}
+  if(name==='ai'){loadNews();setTimeout(loadOddsLog,5000);}
 }
 
 function refreshAll(){
   document.getElementById('last-update').textContent=`עודכן: ${new Date().toLocaleTimeString('he-IL')}`;
   renderMatches();
-  if(document.getElementById('tab-ai').classList.contains('active')){loadNews();setTimeout(loadOddsLog,2000);}
+  if(document.getElementById('tab-ai').classList.contains('active')){loadNews();setTimeout(loadOddsLog,5000);}
 }
 
 // Auto-refresh odds log every 2 hours
@@ -1475,10 +1481,10 @@ function showH2H(matchId){
     <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">📋 מפגשים אחרונים</div>
     ${last.map(l=>`<div style="font-size:.8rem;padding:6px 0;border-bottom:1px solid var(--border);color:var(--text)">${l}</div>`).join('')}
   </div>`:''}
-  <div style="background:#1a1500;border:1px solid #3a2a00;border-radius:10px;padding:12px">
+  <div class="h2h-pred-box">
     <div style="font-size:.72rem;color:var(--gold);font-weight:700;margin-bottom:4px">🎯 תחזית למשחק</div>
-    <div style="font-size:.82rem;color:var(--text)">${m.hf} ${m.home}: <strong style="color:var(--gold2)">${m.hw}%</strong> | תיקו: <strong style="color:#fcd34d">${m.d}%</strong> | ${m.away} ${m.af}: <strong style="color:#6ee7b7">${m.aw}%</strong></div>
-    <div style="font-size:.75rem;color:#86efac;margin-top:4px">תחזית מובילה: <strong>${getTopPrediction(m.hw,m.d,m.aw)}</strong>${m.note?` · ${m.note}`:''}</div>
+    <div class="h2h-pred-text" style="font-size:.82rem">${m.hf} ${m.home}: <strong>${m.hw}%</strong> | תיקו: <strong>${m.d}%</strong> | ${m.away} ${m.af}: <strong>${m.aw}%</strong></div>
+    <div class="h2h-pred-text" style="font-size:.75rem;margin-top:4px;opacity:.85">תחזית מובילה: <strong class="h2h-pred-highlight">${getTopPrediction(m.hw,m.d,m.aw)}</strong>${m.note?` · ${m.note}`:''}</div>
   </div>`;
 
   modal.style.display='flex';
@@ -1503,9 +1509,33 @@ async function loadH2HNews(m){
       })
     });
     const data=await res.json();
-    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const text=data.content?.filter(c=>c.type==='text').map(c=>c.text||'').join('')||'';
+
+    // Collect source links from web_search citations / tool results
+    const sources=[];
+    const seen=new Set();
+    (data.content||[]).forEach(c=>{
+      (c.citations||[]).forEach(ci=>{
+        if(ci.url && !seen.has(ci.url)){ seen.add(ci.url); sources.push({url:ci.url,title:ci.title||ci.url}); }
+      });
+      if(c.type==='web_search_tool_result' && Array.isArray(c.content)){
+        c.content.forEach(r=>{
+          if(r.url && !seen.has(r.url)){ seen.add(r.url); sources.push({url:r.url,title:r.title||r.url}); }
+        });
+      }
+    });
+
     if(text){
-      newsDiv.innerHTML=`<div style="font-size:.78rem;line-height:1.8;color:var(--text);white-space:pre-wrap">${text}</div>`;
+      // Render simple markdown bold (**text**) as <strong>
+      const formatted=text.replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--gold2)">$1</strong>');
+      let html=`<div style="font-size:.78rem;line-height:1.8;color:var(--text);white-space:pre-wrap">${formatted}</div>`;
+      if(sources.length){
+        html+=`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <div style="font-size:.68rem;color:var(--muted);font-weight:700;margin-bottom:4px">🔗 מקורות</div>
+          ${sources.slice(0,4).map(s=>`<a href="${s.url}" target="_blank" rel="noopener" style="display:block;font-size:.7rem;color:var(--blue);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">🔸 ${s.title}</a>`).join('')}
+        </div>`;
+      }
+      newsDiv.innerHTML=html;
     } else {
       newsDiv.innerHTML=`<div style="color:var(--muted);font-size:.78rem">לא נמצאו חדשות עדכניות</div>`;
     }
