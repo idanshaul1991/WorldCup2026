@@ -580,35 +580,73 @@ const MATCHES = [
 // Build 3-column betting panel HTML (like Bet365/1xBet layout)
 // Unified score probability engine — ONE source of truth for both panel and prediction
 function calcScoreProbs(hw, d, aw) {
-  // Poisson-inspired goal distributions
-  // Expected goals based on win probability
-  const hxG = hw>=80?2.8:hw>=65?2.2:hw>=50?1.8:hw>=35?1.4:1.0;
-  const axG = aw>=80?2.8:aw>=65?2.2:aw>=50?1.8:aw>=35?1.4:1.0;
+  // WC2026 is HIGH-SCORING: avg 3.1 goals/game through MD1.
+  // Key insight: xG must be derived separately for each side from their WIN probability.
+  // A team with 62% win prob (~Germany) scores ~2.4 goals; their opponent scores ~1.0.
+  // A team with 88% win prob (~Brazil vs Haiti) scores ~3.2; opponent ~0.5.
 
-  // All realistic scorelines 0-5 goals per team
+  function xgForFavorite(winProb) {
+    // Expected goals scored by the team with winProb% chance
+    if(winProb >= 88) return 3.2;
+    if(winProb >= 78) return 2.7;
+    if(winProb >= 65) return 2.3;
+    if(winProb >= 52) return 1.9;
+    if(winProb >= 40) return 1.6;
+    if(winProb >= 28) return 1.3;
+    return 1.05;
+  }
+
+  function xgForUnderdog(winProb) {
+    // Expected goals conceded = opponent's attacking xG, scaled by underdog weakness
+    // Underdog (low winProb) concedes more, scores less
+    if(winProb >= 88) return 0.45;  // massive fav concedes little
+    if(winProb >= 78) return 0.65;
+    if(winProb >= 65) return 0.90;
+    if(winProb >= 52) return 1.15;
+    if(winProb >= 40) return 1.40;
+    if(winProb >= 28) return 1.60;
+    return 1.80;
+  }
+
+  // Home xG = scoring of home side, Away xG = scoring of away side
+  // When hw > aw: home is fav
+  // When aw > hw: away is fav
+  let hxG, axG;
+  if(hw >= aw) {
+    hxG = xgForFavorite(hw);
+    axG = xgForUnderdog(hw);   // underdog scores against this fav
+  } else {
+    axG = xgForFavorite(aw);
+    hxG = xgForUnderdog(aw);
+  }
+  // For close matches (draw likely), blend toward balanced
+  if(d >= 28) {
+    const blend = (d - 28) / 30; // 0..1
+    const avgXg = (hxG + axG) / 2;
+    hxG = hxG * (1 - blend * 0.4) + avgXg * blend * 0.4;
+    axG = axG * (1 - blend * 0.4) + avgXg * blend * 0.4;
+  }
+
   const results = [];
-  for(let hg=0; hg<=5; hg++){
-    for(let ag=0; ag<=5; ag++){
-      // Poisson probability
-      const hProb = Math.exp(-hxG) * Math.pow(hxG,hg) / factorial(hg);
-      const aProb = Math.exp(-axG) * Math.pow(axG,ag) / factorial(ag);
-      let p = hProb * aProb * 100;
-      results.push({res:`${hg}-${ag}`, h:hg, a:ag, p});
+  for(let hg = 0; hg <= 6; hg++) {
+    for(let ag = 0; ag <= 6; ag++) {
+      const hProb = Math.exp(-hxG) * Math.pow(hxG, hg) / factorial(hg);
+      const aProb = Math.exp(-axG) * Math.pow(axG, ag) / factorial(ag);
+      results.push({res:`${hg}-${ag}`, h:hg, a:ag, p: hProb * aProb * 100});
     }
   }
 
-  // Normalize to match hw/d/aw percentages exactly
-  const rawHome = results.filter(r=>r.h>r.a).reduce((s,r)=>s+r.p,0);
-  const rawDraw = results.filter(r=>r.h===r.a).reduce((s,r)=>s+r.p,0);
-  const rawAway = results.filter(r=>r.h<r.a).reduce((s,r)=>s+r.p,0);
+  const rawHome = results.filter(r=>r.h>r.a).reduce((s,r)=>s+r.p, 0);
+  const rawDraw = results.filter(r=>r.h===r.a).reduce((s,r)=>s+r.p, 0);
+  const rawAway = results.filter(r=>r.h<r.a).reduce((s,r)=>s+r.p, 0);
 
-  return results.map(r=>{
+  return results.map(r => {
     let normalized;
-    if(r.h>r.a) normalized = r.p/rawHome*hw;
-    else if(r.h===r.a) normalized = r.p/rawDraw*d;
-    else normalized = r.p/rawAway*aw;
+    if(r.h > r.a)      normalized = rawHome > 0 ? r.p / rawHome * hw : 0;
+    else if(r.h === r.a) normalized = rawDraw > 0 ? r.p / rawDraw * d : 0;
+    else                  normalized = rawAway > 0 ? r.p / rawAway * aw : 0;
     return {...r, pct: parseFloat(normalized.toFixed(1))};
-  }).sort((a,b)=>b.pct-a.pct);
+  }).sort((a,b) => b.pct - a.pct);
 }
 
 function factorial(n){
