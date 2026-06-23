@@ -162,6 +162,28 @@ body.light .h2h-pred-highlight{color:#b45309}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ── HOT PICKS ── */
+.pick-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.pick-card.high{border-color:#16a34a}.pick-card.medium{border-color:#b45309}.pick-card.low{border-color:#1e3a5f}
+.pick-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);flex-wrap:wrap;gap:6px}
+.pick-match-name{font-weight:800;font-size:.88rem}
+.pick-conf{font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:20px}
+.conf-high{background:#0d2d1a;color:#4ade80}.conf-medium{background:#3a2800;color:#fcd34d}.conf-low{background:#1e3a5f;color:#93c5fd}
+.pick-body{padding:12px 14px}
+.pick-odds-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.pick-odd-box{text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 4px}
+.pick-odd-box.selected{border-color:var(--gold);background:#1a1500}
+.pick-odd-lbl{font-size:.6rem;color:var(--muted);margin-bottom:2px}
+.pick-odd-val{font-size:.92rem;font-weight:900;color:var(--gold2)}
+.pick-odd-pct{font-size:.62rem;color:var(--muted);margin-top:2px}
+.pick-rec{background:linear-gradient(135deg,#1a1500,#0d1a10);border:1px solid #3a2800;border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.pick-rec-label{font-size:.65rem;font-weight:800;color:var(--gold);margin-bottom:4px}
+.pick-rec-text{font-size:.8rem;color:var(--text);line-height:1.6}
+.pick-value-box{background:#0d1a10;border:1px solid #1a4a2a;border-radius:10px;padding:8px 12px;font-size:.75rem;color:#86efac;line-height:1.5}
+.pick-form-row{display:flex;gap:6px;align-items:center;font-size:.72rem;margin-top:8px;flex-wrap:wrap}
+.form-dot{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;color:#fff;flex-shrink:0}
+.form-w{background:#16a34a}.form-d{background:#b45309}.form-l{background:#991b1b}
+.pick-meta{display:flex;gap:10px;font-size:.65rem;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 @media(max-width:560px){.tabs{flex-wrap:wrap}.tab{min-width:calc(50% - 4px);flex:none}.ko-match{grid-template-columns:70px 1fr auto}}
 /* ── LIGHT MODE ── */
 body.light{--bg:#f0f2f8;--bg2:#ffffff;--bg3:#e8eaf2;--border:#d0d4e8;--text:#1a1a2e;--muted:#6b7090}
@@ -332,6 +354,7 @@ body.light .squad-goal-bar-wrap{background:#e2e8f0}
 <div class="tabs-wrap">
   <div class="tabs">
     <button class="tab active" onclick="showTab('matches',this)">📅 משחקים</button>
+    <button class="tab" onclick="showTab('picks',this);loadHotPicks()">🔥 פיקים</button>
     <button class="tab" onclick="showTab('groups',this)">🗂 בתים</button>
     <button class="tab" onclick="showTab('knockout',this)">⚔️ נוק-אאוט</button>
     <button class="tab" onclick="showTab('odds',this)">📊 אודס</button>
@@ -375,6 +398,30 @@ body.light .squad-goal-bar-wrap{background:#e2e8f0}
       <button class="modal-close" onclick="closePlayerModal()">✕</button>
     </div>
     <div class="modal-body" id="player-body"></div>
+  </div>
+</div>
+
+<!-- ===== HOT PICKS ===== -->
+<div id="tab-picks" class="section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="section-title" style="margin-bottom:0">🔥 פיקים חמים — המלצות מבוססות נתונים</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="picks-ts" style="font-size:.65rem;color:var(--muted)"></span>
+      <button class="cal-btn" id="picks-refresh-btn" onclick="loadHotPicks(true)" style="font-size:.72rem;padding:5px 12px">🔄 רענן</button>
+    </div>
+  </div>
+  <div class="card" style="background:#1a1000;border-color:#4a2800;margin-bottom:12px">
+    <div style="font-size:.78rem;color:#fcd34d;line-height:1.7">
+      <strong style="color:var(--gold)">🎯 איך זה עובד?</strong><br>
+      המערכת מחפשת ברשת אודס עדכניים, פורם אחרון, פציעות וניתוחי מומחים — ומסנתזת המלצת הימור לכל משחק קרוב. ציון ביטחון = כמה מקורות מסכימים. Value = הימור שהאודס גבוה מהסיכוי האמיתי.
+    </div>
+  </div>
+  <div id="picks-container">
+    <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">לחץ "רענן" לטעינת פיקים עדכניים ⬆️</div>
+  </div>
+  <div id="picks-summary" style="display:none" class="card mt14" style="background:#0d1a10;border-color:#1a4a2a">
+    <div class="section-title" style="font-size:.85rem">📊 סיכום וסטטיסטיקות</div>
+    <div id="picks-summary-content"></div>
   </div>
 </div>
 
@@ -1089,6 +1136,180 @@ async function callAI(payload, retries=2) {
       throw e;
     }
   }
+}
+
+// ===================== HOT PICKS =====================
+let picksLoaded = false;
+
+async function loadHotPicks(force=false){
+  const container = document.getElementById('picks-container');
+  const tsEl = document.getElementById('picks-ts');
+  const btn = document.getElementById('picks-refresh-btn');
+
+  // Use cache unless forced
+  if(!force){
+    const cached = localStorage.getItem('wc_picks_cache');
+    if(cached){
+      try{
+        const {html, ts, summaryHtml} = JSON.parse(cached);
+        const ageMins = (Date.now()-ts)/60000;
+        if(ageMins < 120){ // 2 hour cache
+          container.innerHTML = html;
+          if(summaryHtml){ document.getElementById('picks-summary').style.display='block'; document.getElementById('picks-summary-content').innerHTML=summaryHtml; }
+          if(tsEl) tsEl.textContent = `עודכן ${timeAgoLabel(ts)}`;
+          picksLoaded = true;
+          return;
+        }
+      }catch{}
+    }
+    if(picksLoaded) return;
+  }
+
+  picksLoaded = true;
+  if(btn) btn.disabled = true;
+  container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)"><span class="spinner"></span> מחפש אודס, פורם ודעות מומחים ברחבי הרשת...</div>`;
+
+  // Find next 6 upcoming matches
+  const today = todayISO();
+  const upcoming = MATCHES
+    .filter(m => !liveResults[m.id]?.status?.includes('FT') && m.iso >= today)
+    .sort((a,b) => a.iso.localeCompare(b.iso) || a.tIL.localeCompare(b.tIL))
+    .slice(0,6);
+
+  const matchList = upcoming.map(m=>`${m.hf}${m.home} נגד ${m.away}${m.af} (${m.date}, ${m.tIL} שעון ישראל)`).join('\n');
+
+  try{
+    const data = await callAI({
+      model:'claude-sonnet-4-20250514', max_tokens:3000,
+      tools:[{type:'web_search_20250305',name:'web_search'}],
+      system:`אתה מנתח הימורי כדורגל מקצועי עם גישה לאינטרנט. תמיד ענה בעברית. חפש אודס עדכניים מאתרי הימורים (Bet365, Pinnacle, 888sport, Betway), ניתוחי מומחים מאתרים כמו Forebet, FootballPredictions, SoccerWay, AccaZone, Infogol, Soccerstats. חפש גם פורם אחרון ופציעות. הוצא המלצה קונקרטית לכל משחק.`,
+      messages:[{role:'user',content:`היום ${today}. אלו המשחקים הקרובים במונדיאל 2026:
+${matchList}
+
+עבור כל משחק, חפש ברשת:
+1. אודס עדכניים מבוקמייקרים (מנוסח כ- +150, +220 וכו')
+2. פורם אחרון של כל קבוצה (5 משחקים אחרונים - ניצחון/תיקו/הפסד)
+3. פציעות ועדכוני הרכב
+4. תחזית של מומחים ואתרי הימורים (Forebet, AccaZone וכו')
+5. האם יש value bet (הימור שהאודס טוב מהסיכוי האמיתי)
+
+החזר JSON בדיוק בפורמט הזה ללא שום טקסט נוסף:
+{
+  "picks": [
+    {
+      "matchId": "מזהה משחק",
+      "home": "שם בית",
+      "away": "שם אורח",
+      "homeFlag": "דגל",
+      "awayFlag": "דגל",
+      "date": "תאריך",
+      "time": "שעה",
+      "homeOdds": "+150",
+      "drawOdds": "+230",
+      "awayOdds": "+180",
+      "homeProb": 42,
+      "drawProb": 28,
+      "awayProb": 30,
+      "pick": "home",
+      "confidence": "high",
+      "mainReason": "הסבר קצר ומדויק על למה זה הפיק",
+      "valueBet": "הסבר למה יש ערך בהימור הזה",
+      "formHome": "WWDLW",
+      "formAway": "LWWDW",
+      "keyFact": "עובדה מפתח אחת (פציעה, סדרת ניצחונות, ראש בראש)",
+      "sources": ["מקור1","מקור2"]
+    }
+  ],
+  "summary": "סיכום קצר של הפיקים החמים ביותר היום"
+}`}]
+    });
+
+    const text = data.content?.map(c=>c.type==='text'?c.text:'').join('')||'';
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('לא התקבל JSON תקין');
+    const parsed = JSON.parse(match[0]);
+    const picks = parsed.picks||[];
+
+    if(!picks.length){
+      container.innerHTML=`<div style="color:var(--muted);padding:20px;text-align:center;font-size:.85rem">לא נמצאו פיקים כרגע. נסה שוב בעוד מעט.</div>`;
+      if(btn) btn.disabled=false;
+      return;
+    }
+
+    const confLabel = {high:'ביטחון גבוה 🔥',medium:'ביטחון בינוני ⚡',low:'ביטחון נמוך 💡'};
+    const pickLabel = {home:'בית', draw:'תיקו', away:'אורח'};
+
+    const html = picks.map(p=>{
+      const formDots = (form='')=>form.split('').map(c=>{
+        const cls = c==='W'?'form-w':c==='D'?'form-d':'form-l';
+        return `<span class="form-dot ${cls}">${c}</span>`;
+      }).join('');
+
+      return `<div class="pick-card ${p.confidence||'medium'}">
+        <div class="pick-header">
+          <div>
+            <div class="pick-match-name">${p.homeFlag||''} ${p.home} נגד ${p.away} ${p.awayFlag||''}</div>
+            <div style="font-size:.68rem;color:var(--muted);margin-top:2px">📅 ${p.date} · ⏰ ${p.time}</div>
+          </div>
+          <div style="text-align:left">
+            <div class="pick-conf conf-${p.confidence||'medium'}">${confLabel[p.confidence]||'⚡ ניתוח'}</div>
+            <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-top:4px">✅ המלצה: ${pickLabel[p.pick]||p.pick}</div>
+          </div>
+        </div>
+        <div class="pick-body">
+          <div class="pick-odds-row">
+            <div class="pick-odd-box ${p.pick==='home'?'selected':''}">
+              <div class="pick-odd-lbl">${p.home}</div>
+              <div class="pick-odd-val">${p.homeOdds||'—'}</div>
+              <div class="pick-odd-pct">${p.homeProb||'—'}%</div>
+            </div>
+            <div class="pick-odd-box ${p.pick==='draw'?'selected':''}">
+              <div class="pick-odd-lbl">תיקו</div>
+              <div class="pick-odd-val">${p.drawOdds||'—'}</div>
+              <div class="pick-odd-pct">${p.drawProb||'—'}%</div>
+            </div>
+            <div class="pick-odd-box ${p.pick==='away'?'selected':''}">
+              <div class="pick-odd-lbl">${p.away}</div>
+              <div class="pick-odd-val">${p.awayOdds||'—'}</div>
+              <div class="pick-odd-pct">${p.awayProb||'—'}%</div>
+            </div>
+          </div>
+          <div class="pick-rec">
+            <div class="pick-rec-label">🎯 המלצה: ${pickLabel[p.pick]||p.pick}</div>
+            <div class="pick-rec-text">${p.mainReason||''}</div>
+          </div>
+          ${p.valueBet?`<div class="pick-value-box">💰 Value Bet: ${p.valueBet}</div>`:''}
+          ${(p.formHome||p.formAway)?`<div class="pick-form-row">
+            <span style="color:var(--muted);min-width:70px">${p.home}:</span>${formDots(p.formHome||'')}
+            <span style="color:var(--muted);min-width:70px;margin-right:8px">${p.away}:</span>${formDots(p.formAway||'')}
+          </div>`:''}
+          <div class="pick-meta">
+            ${p.keyFact?`<span>📌 ${p.keyFact}</span>`:''}
+            ${(p.sources||[]).length?`<span>🔗 ${p.sources.slice(0,2).join(' · ')}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+
+    const summaryHtml = parsed.summary
+      ? `<div style="font-size:.82rem;color:var(--text);line-height:1.7">${parsed.summary}</div>`
+      : '';
+    if(summaryHtml){
+      document.getElementById('picks-summary').style.display='block';
+      document.getElementById('picks-summary-content').innerHTML=summaryHtml;
+    }
+
+    const ts = Date.now();
+    localStorage.setItem('wc_picks_cache', JSON.stringify({html, summaryHtml, ts}));
+    if(tsEl) tsEl.textContent = `עודכן ${timeAgoLabel(ts)}`;
+
+  }catch(e){
+    container.innerHTML=`<div style="color:#f87171;padding:20px;font-size:.82rem">❌ שגיאה: ${e.message}<br><span style="color:var(--muted)">לחץ "רענן" לנסות שוב</span></div>`;
+    picksLoaded=false;
+  }
+  if(btn) btn.disabled=false;
 }
 
 async function askAI(){
