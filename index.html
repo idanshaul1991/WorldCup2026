@@ -1213,13 +1213,14 @@ async function loadHotPicks(force){
     picksLoading=false; if(btn) btn.disabled=false; return;
   }
 
-  const matchList = upcoming.map(m=>m.home+' vs '+m.away+' ('+m.date+')').join(' | ');
+  const matchList = upcoming.map(m=>m.hf+m.home+' נגד '+m.away+m.af+' ('+m.date+')').join(', ');
 
   try{
     const data = await callAI({
       model:'claude-sonnet-4-20250514', max_tokens:1200,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      messages:[{role:'user',content:'FIFA World Cup 2026. Games: '+matchList+'. Find odds+form from Bet365/Forebet. Reply ONLY with JSON (no other text): {"picks":[{"home":"name","away":"name","homeFlag":"emoji","awayFlag":"emoji","date":"dd.mm","time":"HH:MM","homeOdds":"+120","drawOdds":"+240","awayOdds":"+200","homeProb":45,"drawProb":27,"awayProb":28,"pick":"home","confidence":"high","mainReason":"בעברית","valueBet":"בעברית","formHome":"WWDLW","formAway":"LWWDW","keyFact":"בעברית","sources":["site"]}],"summary":"בעברית"}'}]
+      system:'אתה מנתח הימורי כדורגל מקצועי. ענה תמיד בעברית בלבד. החזר JSON תקני בלבד ללא טקסט נוסף.',
+      messages:[{role:'user',content:`חפש אודס ותחזיות לקראת משחקי מונדיאל 2026: ${matchList}. חפש ב-Bet365, Forebet, AccaZone. החזר JSON בלבד: {"picks":[{"home":"שם","away":"שם","homeFlag":"דגל","awayFlag":"דגל","date":"תאריך","time":"שעה","homeOdds":"+120","drawOdds":"+240","awayOdds":"+200","homeProb":45,"drawProb":27,"awayProb":28,"pick":"home","confidence":"high","mainReason":"סיבה בעברית","valueBet":"הסבר ערך בעברית","formHome":"WWDLW","formAway":"LWWDW","keyFact":"עובדה מפתח","sources":["אתר"]}],"summary":"סיכום בעברית"}`}]
     });
 
     const rawText = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
@@ -1273,27 +1274,33 @@ async function checkMatchOddsUpdate(){
   const upcoming = MATCHES
     .filter(m=>m.iso>=today)
     .sort((a,b)=>a.iso.localeCompare(b.iso))
-    .slice(0,6);
+    .slice(0,5);
   if(!upcoming.length) return;
-  const matchList = upcoming.map(m=>m.hf+m.home+' vs '+m.away+m.af+' ('+m.date+')').join(', ');
+  const matchList = upcoming.map(m=>m.hf+m.home+' נגד '+m.away+m.af+' ('+m.date+')').join(', ');
   try{
     const data = await callAI({
-      model:'claude-sonnet-4-20250514', max_tokens:800,
+      model:'claude-sonnet-4-20250514', max_tokens:700,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      system:'Return ONLY valid JSON, no other text.',
-      messages:[{role:'user',content:'World Cup 2026 upcoming: '+matchList+'. Search current Bet365/Pinnacle odds. Return ONLY JSON: {"odds":[{"home":"team","away":"team","homeProb":42,"drawProb":28,"awayProb":30}]}'}]
+      system:'אתה מנתח הימורים. ענה בעברית. החזר JSON בלבד ללא טקסט נוסף.',
+      messages:[{role:'user',content:`חפש אודס עדכניים ב-Bet365 למשחקי מונדיאל 2026: ${matchList}. החזר JSON בלבד: {"odds":[{"home":"שם בית","away":"שם אורח","homeProb":42,"drawProb":28,"awayProb":30}]}`}]
     });
     const txt=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
     const jm=txt.match(/\{[\s\S]+\}/);
     if(!jm) return;
     const parsed=JSON.parse(jm[0]);
+    let updated=0;
     (parsed.odds||[]).forEach(o=>{
-      const m=MATCHES.find(x=>x.home===o.home&&x.away===o.away);
-      if(m&&o.homeProb&&o.drawProb&&o.awayProb){ m.hw=o.homeProb; m.d=o.drawProb; m.aw=o.awayProb; m._oddsUpdated=true; }
+      const m=MATCHES.find(x=>x.home===o.home||x.away===o.away||(o.home&&x.home.includes(o.home))||(o.away&&x.away.includes(o.away)));
+      if(m&&o.homeProb>0&&o.drawProb>0&&o.awayProb>0&&(o.homeProb+o.drawProb+o.awayProb)<=105){
+        m.hw=Math.round(o.homeProb); m.d=Math.round(o.drawProb); m.aw=Math.round(o.awayProb);
+        m._oddsUpdated=true; updated++;
+      }
     });
-    localStorage.setItem(key,today);
-    renderMatches();
-    showToast('📊 תחזיות משחקים עודכנו!','#0d1a10','#4ade80');
+    if(updated>0){
+      localStorage.setItem(key,today);
+      renderMatches();
+      showToast('📊 תחזיות '+updated+' משחקים עודכנו!','#0d1a10','#4ade80');
+    }
   }catch(e){}
 }
 
