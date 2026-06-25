@@ -1220,7 +1220,7 @@ async function loadHotPicks(force){
       model:'claude-sonnet-4-20250514', max_tokens:1200,
       tools:[{type:'web_search_20250305',name:'web_search'}],
       system:'אתה מנתח הימורי כדורגל מקצועי. ענה תמיד בעברית בלבד. החזר JSON תקני בלבד ללא טקסט נוסף.',
-      messages:[{role:'user',content:`חפש אודס ותחזיות לקראת משחקי מונדיאל 2026: ${matchList}. חפש ב-Bet365, Forebet, AccaZone. החזר JSON בלבד: {"picks":[{"home":"שם","away":"שם","homeFlag":"דגל","awayFlag":"דגל","date":"תאריך","time":"שעה","homeOdds":"+120","drawOdds":"+240","awayOdds":"+200","homeProb":45,"drawProb":27,"awayProb":28,"pick":"home","confidence":"high","mainReason":"סיבה בעברית","valueBet":"הסבר ערך בעברית","formHome":"WWDLW","formAway":"LWWDW","keyFact":"עובדה מפתח","sources":["אתר"]}],"summary":"סיכום בעברית"}`}]
+      messages:[{role:'user',content:`חפש אודס ותחזיות לקראת משחקי מונדיאל 2026: ${matchList}. חפש ב-Bet365, Forebet, AccaZone. החזר JSON בלבד ללא אמוג'י ודגלים: {"picks":[{"home":"שם בעברית","away":"שם בעברית","date":"תאריך","time":"שעה","homeOdds":"+120","drawOdds":"+240","awayOdds":"+200","homeProb":45,"drawProb":27,"awayProb":28,"pick":"home","confidence":"high","mainReason":"סיבה בעברית","valueBet":"הסבר ערך","formHome":"WWDLW","formAway":"LWWDW","keyFact":"עובדה מפתח","sources":["אתר"]}],"summary":"סיכום בעברית"}`}]
     });
 
     const rawText = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
@@ -1228,7 +1228,7 @@ async function loadHotPicks(force){
     const cleanText = rawText
       .replace(/[“”„‟″‶]/g,'"')
       .replace(/[‘’‚‛′‵]/g,"'")
-      .replace(/[-￰-￿]/g,''); // strip private use / tag chars
+      .replace(/[\uDB40][\uDC00-\uDC7F]/g,'').replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g,''); // strip emoji+tag chars
     const jsonMatch = cleanText.match(/\{[\s\S]+\}/);
     if(!jsonMatch) throw new Error('תגובת AI לא הכילה JSON. תגובה: '+rawText.substring(0,200));
 
@@ -1239,15 +1239,15 @@ async function loadHotPicks(force){
     const picks = parsed.picks||[];
     if(!picks.length) throw new Error('AI החזיר picks ריק. סיכום: '+(parsed.summary||''));
 
-    // Update MATCHES probabilities from picks
+    // Enrich picks with flags from local MATCHES data (avoid emoji in JSON)
     picks.forEach(p=>{
-      const m = MATCHES.find(x=>
-        (x.home===p.home||x.hf+x.home===p.homeFlag+p.home) &&
-        (x.away===p.away||x.af+x.away===p.awayFlag+p.away)
-      );
-      if(m && p.homeProb && p.drawProb && p.awayProb){
-        m.hw = p.homeProb; m.d = p.drawProb; m.aw = p.awayProb;
-        m._oddsUpdated = true;
+      const m = MATCHES.find(x=>x.home===p.home && x.away===p.away)
+             || MATCHES.find(x=>(p.home&&x.home.includes(p.home))||(p.away&&x.away.includes(p.away)));
+      if(m){
+        p.homeFlag=m.hf; p.awayFlag=m.af;
+        if(p.homeProb>0 && p.drawProb>0 && p.awayProb>0){
+          m.hw=p.homeProb; m.d=p.drawProb; m.aw=p.awayProb; m._oddsUpdated=true;
+        }
       }
     });
     renderMatches();
