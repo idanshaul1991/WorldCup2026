@@ -1542,6 +1542,194 @@ function addAllToCalendar(){
 // Simple points table — starts at 0, updated manually via results
 const RESULTS = {}; // { matchId: {h: goals, a: goals} } — fill as matches played
 
+// ─── Real Data APIs ───────────────────────────────────────────────────────
+const FDORG_TOKEN = '74976e95c2a84cc28678f885b7965107';
+const ODDS_API_KEY = '74f76d48e35ade7375bd48773f4c62fb';
+
+const FD_NAME_MAP = {
+  'Mexico':'מקסיקו','South Africa':'דרום אפריקה','Korea Republic':'קוריאה הדרומית',
+  'South Korea':'קוריאה הדרומית','Czechia':"צ'כיה",'Czech Republic':"צ'כיה",
+  'Canada':'קנדה','Bosnia and Herzegovina':'בוסניה','Bosnia':'בוסניה',
+  'Qatar':'קטר','Switzerland':'שווייץ','Brazil':'ברזיל','Morocco':'מרוקו',
+  'Haiti':'האיטי','Scotland':'סקוטלנד','United States':'ארה"ב','USA':'ארה"ב',
+  'Paraguay':'פרגוואי','Australia':'אוסטרליה','Turkey':'טורקיה','Türkiye':'טורקיה',
+  'Germany':'גרמניה','Curaçao':'קוראסאו','Curacao':'קוראסאו',
+  "Côte d'Ivoire":'חוף השנהב','Ivory Coast':'חוף השנהב','Ecuador':'אקוודור',
+  'Netherlands':'הולנד','Japan':'יפן','Sweden':'שוודיה','Tunisia':'תוניסיה',
+  'Belgium':'בלגיה','Egypt':'מצרים','Iran':'איראן','New Zealand':'ניו זילנד',
+  'Spain':'ספרד','Cape Verde':'כף ורדה','Saudi Arabia':'ערב הסעודית',
+  'Uruguay':'אורוגוואי','France':'צרפת','Senegal':'סנגל','Iraq':'עיראק',
+  'Norway':'נורבגיה','Argentina':'ארגנטינה','Algeria':"אלג'ריה",
+  'Austria':'אוסטריה','Jordan':'ירדן','Portugal':'פורטוגל',
+  'DR Congo':'קונגו DR','Congo DR':'קונגו DR','Democratic Republic of Congo':'קונגו DR',
+  'Uzbekistan':'אוזבקיסטן','Colombia':'קולומביה','England':'אנגליה',
+  'Croatia':'קרואטיה','Ghana':'גאנה','Panama':'פנמה'
+};
+
+const ODDS_NAME_MAP = {
+  'Mexico':'מקסיקו','South Africa':'דרום אפריקה','South Korea':'קוריאה הדרומית',
+  'Czech Republic':"צ'כיה",'Canada':'קנדה','Bosnia-Herzegovina':'בוסניה',
+  'Qatar':'קטר','Switzerland':'שווייץ','Brazil':'ברזיל','Morocco':'מרוקו',
+  'Haiti':'האיטי','Scotland':'סקוטלנד','United States':'ארה"ב',
+  'Paraguay':'פרגוואי','Australia':'אוסטרליה','Turkey':'טורקיה',
+  'Germany':'גרמניה','Curacao':'קוראסאו','Ivory Coast':'חוף השנהב',
+  'Ecuador':'אקוודור','Netherlands':'הולנד','Japan':'יפן','Sweden':'שוודיה',
+  'Tunisia':'תוניסיה','Belgium':'בלגיה','Egypt':'מצרים','Iran':'איראן',
+  'New Zealand':'ניו זילנד','Spain':'ספרד','Cape Verde':'כף ורדה',
+  'Saudi Arabia':'ערב הסעודית','Uruguay':'אורוגוואי','France':'צרפת',
+  'Senegal':'סנגל','Iraq':'עיראק','Norway':'נורבגיה','Argentina':'ארגנטינה',
+  'Algeria':"אלג'ריה",'Austria':'אוסטריה','Jordan':'ירדן','Portugal':'פורטוגל',
+  'DR Congo':'קונגו DR','Uzbekistan':'אוזבקיסטן','Colombia':'קולומביה',
+  'England':'אנגליה','Croatia':'קרואטיה','Ghana':'גאנה','Panama':'פנמה'
+};
+
+function americanToProb(odds) {
+  if(!odds) return 0;
+  const n = parseFloat(odds);
+  if(isNaN(n)) return 0;
+  return n > 0 ? Math.round(100/(n+100)*100) : Math.round(Math.abs(n)/(Math.abs(n)+100)*100);
+}
+
+async function fetchRealResults() {
+  const CACHE_KEY = 'wc_fd_results_v2';
+  const CACHE_TS  = 'wc_fd_results_ts';
+  const cached = localStorage.getItem(CACHE_KEY);
+  const ts = parseInt(localStorage.getItem(CACHE_TS)||'0');
+  if(cached && Date.now()-ts < 20*60*1000) {
+    Object.assign(RESULTS, JSON.parse(cached));
+    refreshAfterResults();
+    return;
+  }
+  try {
+    const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
+      headers:{'X-Auth-Token': FDORG_TOKEN}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const newR = {};
+    (data.matches||[]).forEach(m=>{
+      if(m.status !== 'FINISHED') return;
+      const hHe = FD_NAME_MAP[m.homeTeam.name] || m.homeTeam.shortName || m.homeTeam.name;
+      const aHe = FD_NAME_MAP[m.awayTeam.name] || m.awayTeam.shortName || m.awayTeam.name;
+      const match = MATCHES.find(x=>x.home===hHe && x.away===aHe);
+      if(match && m.score.fullTime.home != null) {
+        newR[match.id] = {h: m.score.fullTime.home, a: m.score.fullTime.away};
+      }
+    });
+    const count = Object.keys(newR).length;
+    Object.assign(RESULTS, newR);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(newR));
+    localStorage.setItem(CACHE_TS, Date.now().toString());
+    refreshAfterResults();
+    if(count>0) showToast('📊 '+count+' תוצאות עודכנו!','#0a1a0a','#86efac');
+  } catch(e) {
+    console.warn('fetchRealResults:', e.message);
+    if(cached){ Object.assign(RESULTS, JSON.parse(cached)); refreshAfterResults(); }
+  }
+}
+
+async function fetchRealOdds() {
+  const CACHE_KEY = 'wc_odds_api_v2';
+  const CACHE_TS  = 'wc_odds_api_ts';
+  const cached = localStorage.getItem(CACHE_KEY);
+  const ts = parseInt(localStorage.getItem(CACHE_TS)||'0');
+  if(cached && Date.now()-ts < 6*60*60*1000) {
+    applyOddsData(JSON.parse(cached));
+    return;
+  }
+  try {
+    // Match odds for upcoming WC games
+    const r1 = await fetch(
+      'https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey='+ODDS_API_KEY+'&regions=eu&markets=h2h&oddsFormat=american',
+      {headers:{'Content-Type':'application/json'}}
+    );
+    const matchOdds = r1.ok ? await r1.json() : [];
+
+    // Tournament winner outrights
+    const r2 = await fetch(
+      'https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey='+ODDS_API_KEY+'&regions=eu&markets=outrights&oddsFormat=american',
+      {headers:{'Content-Type':'application/json'}}
+    );
+    const outrights = r2.ok ? await r2.json() : [];
+
+    const payload = {matchOdds, outrights};
+    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    localStorage.setItem(CACHE_TS, Date.now().toString());
+    applyOddsData(payload);
+    showToast('💰 אודס עודכנו מהמוקי!','#0a0a1a','#818cf8');
+  } catch(e) {
+    console.warn('fetchRealOdds:', e.message);
+    if(cached) applyOddsData(JSON.parse(cached));
+  }
+}
+
+function applyOddsData(payload) {
+  const {matchOdds=[], outrights=[]} = payload;
+
+  // Update per-match probabilities
+  let updated = 0;
+  matchOdds.forEach(event=>{
+    const hName = ODDS_NAME_MAP[event.home_team] || event.home_team;
+    const aName = ODDS_NAME_MAP[event.away_team] || event.away_team;
+    const m = MATCHES.find(x=>x.home===hName && x.away===aName);
+    if(!m) return;
+    // Average odds across bookmakers
+    let hSum=0,dSum=0,aSum=0,cnt=0;
+    (event.bookmakers||[]).forEach(bk=>{
+      const h2h = (bk.markets||[]).find(mk=>mk.key==='h2h');
+      if(!h2h) return;
+      const hO = h2h.outcomes.find(o=>o.name===event.home_team);
+      const dO = h2h.outcomes.find(o=>o.name==='Draw');
+      const aO = h2h.outcomes.find(o=>o.name===event.away_team);
+      if(hO&&dO&&aO){ hSum+=americanToProb(hO.price); dSum+=americanToProb(dO.price); aSum+=americanToProb(aO.price); cnt++; }
+    });
+    if(cnt>0){
+      const tot = (hSum+dSum+aSum)/cnt;
+      m.hw = Math.round(hSum/cnt*100/tot);
+      m.d  = Math.round(dSum/cnt*100/tot);
+      m.aw = Math.round(aSum/cnt*100/tot);
+      m._oddsUpdated = true;
+      updated++;
+    }
+  });
+  if(updated>0){ renderMatches(); }
+
+  // Update tournament winner odds
+  const outEvent = outrights.find(e=>e.sport_key && e.sport_key.includes('world_cup'));
+  if(outEvent) {
+    const outMkt = (outEvent.bookmakers||[])[0];
+    if(outMkt) {
+      const outcomes = ((outMkt.markets||[])[0]||{}).outcomes||[];
+      if(outcomes.length>0){
+        const sorted = [...outcomes].sort((a,b)=>americanToProb(b.price)-americanToProb(a.price));
+        ODDS_DATA.tournament = sorted.slice(0,12).map((o,i)=>{
+          const heName = ODDS_NAME_MAP[o.name]||o.name;
+          const match_m = MATCHES.find(x=>x.home===heName||x.away===heName);
+          const prob = americanToProb(o.price);
+          return {
+            n: heName,
+            f: match_m ? (match_m.hf||match_m.af) : '',
+            odds: o.price>0?'+'+o.price:String(o.price),
+            prob,
+            g: '',
+            rec: i===0?'🔥 המלצה חמה':i<3?'💎 ערך טוב':'',
+            rc: i===0?'#f59e0b':i<3?'#3b82f6':'#6b7280'
+          };
+        });
+        renderOdds();
+      }
+    }
+  }
+}
+
+function refreshAfterResults() {
+  renderGroupContentWithStandings();
+  renderKO();
+  renderMatches();
+}
+// ─── End Real Data APIs ───────────────────────────────────────────────────
+
+
 function calcStandings(groupId){
   const teams=GROUPS_DATA[groupId].teams.map(t=>({
     name:t.n, flag:t.f, tier:t.t,
@@ -2308,6 +2496,8 @@ window.onload=()=>{
   setTimeout(checkDailyOddsUpdate, 3000);
   // Update match probabilities from real bookmaker odds
   setTimeout(checkMatchOddsUpdate, 6000);
+  setTimeout(fetchRealResults, 1000);
+  setTimeout(fetchRealOdds, 2000);
 };
 </script>
 </body>
