@@ -1224,8 +1224,12 @@ async function loadHotPicks(force){
     });
 
     const rawText = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
-    // Extract JSON — take the first complete { ... } block
-    const jsonMatch = rawText.match(/\{[\s\S]+\}/);
+    // Normalize smart quotes → regular quotes, remove invisible chars
+    const cleanText = rawText
+      .replace(/[“”„‟″‶]/g,'"')
+      .replace(/[‘’‚‛′‵]/g,"'")
+      .replace(/[-￰-￿]/g,''); // strip private use / tag chars
+    const jsonMatch = cleanText.match(/\{[\s\S]+\}/);
     if(!jsonMatch) throw new Error('תגובת AI לא הכילה JSON. תגובה: '+rawText.substring(0,200));
 
     let parsed;
