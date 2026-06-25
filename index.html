@@ -1213,14 +1213,13 @@ async function loadHotPicks(force){
     picksLoading=false; if(btn) btn.disabled=false; return;
   }
 
-  const matchList = upcoming.map(m=>m.hf+m.home+' vs '+m.away+m.af+' ('+m.date+')').join(', ');
+  const matchList = upcoming.map(m=>m.home+' vs '+m.away+' ('+m.date+')').join(' | ');
 
   try{
     const data = await callAI({
-      model:'claude-sonnet-4-20250514', max_tokens:2000,
+      model:'claude-sonnet-4-20250514', max_tokens:1200,
       tools:[{type:'web_search_20250305',name:'web_search'}],
-      system:'You are a football betting expert. Search for current real odds and predictions. Always respond with valid JSON only, no other text.',
-      messages:[{role:'user',content:'World Cup 2026 matches today/tomorrow: '+matchList+'. Search for current bookmaker odds (Bet365/Pinnacle), recent team form (last 5 games W/D/L), injuries, and expert predictions from Forebet/AccaZone/Infogol. Return ONLY this JSON, no other text:\n{"picks":[{"home":"team","away":"team","homeFlag":"flag","awayFlag":"flag","date":"dd.mm","time":"HH:MM","homeOdds":"+150","drawOdds":"+230","awayOdds":"+180","homeProb":42,"drawProb":28,"awayProb":30,"pick":"home","confidence":"high","mainReason":"reason in Hebrew","valueBet":"value explanation in Hebrew","formHome":"WWDLW","formAway":"LWWDW","keyFact":"key fact in Hebrew","sources":["src1"]}],"summary":"summary in Hebrew"}'}]
+      messages:[{role:'user',content:'FIFA World Cup 2026. Games: '+matchList+'. Find odds+form from Bet365/Forebet. Reply ONLY with JSON (no other text): {"picks":[{"home":"name","away":"name","homeFlag":"emoji","awayFlag":"emoji","date":"dd.mm","time":"HH:MM","homeOdds":"+120","drawOdds":"+240","awayOdds":"+200","homeProb":45,"drawProb":27,"awayProb":28,"pick":"home","confidence":"high","mainReason":"בעברית","valueBet":"בעברית","formHome":"WWDLW","formAway":"LWWDW","keyFact":"בעברית","sources":["site"]}],"summary":"בעברית"}'}]
     });
 
     const rawText = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
